@@ -26,7 +26,13 @@
 .word {
   font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+}
+.vs {
+  font-weight: 400;
+  color: var(--text-tertiary);
+  font-style: italic;
+  margin: 0 1px;
 }
 .note {
   font-size: 13px;

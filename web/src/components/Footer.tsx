@@ -7,7 +7,9 @@ export default function Footer() {
         <div className={s.left}>
           <div className={s.brandRow}>
             <span className={s.mark} aria-hidden="true" />
-            <span className={s.word}>dbvsdc</span>
+            <span className={s.word}>
+              DB <span className={s.vs}>vs</span> DC
+            </span>
           </div>
           <p className={s.note}>
             퇴직연금 DB vs DC 비교 시뮬레이터. 정보 제공용이며 투자 권유·자문이 아닙니다.
