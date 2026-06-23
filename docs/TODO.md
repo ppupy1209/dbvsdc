@@ -25,6 +25,7 @@
 - [x] 백엔드 API 계약·MySQL 스키마 정의 ([api-spec.md](api-spec.md)) + mock 라우트 ✅
 - [x] **Codex: Spring 백엔드 스캐폴딩** (`api/`) — GET /api/index-returns 샘플모드 구현, MySQL 스키마/JPA/배치 골격, 프로필 분리, CORS ✅ (Claude 리뷰 통과)
 - [x] 백엔드 빌드·실행 검증 — **Docker(JDK17 컨테이너)로 해결**. `docker compose up`, /api/index-returns 200 확인 ✅ (로컬 Java 8 우회)
+- [x] 프론트↔백엔드 end-to-end 연결 검증 — `web/.env.local`(NEXT_PUBLIC_API_BASE=http://localhost:8090) → 프론트가 백엔드 호출 200·CORS 정상·화면 반영 확인 ✅
 - [ ] `LiveMarketDataSource` 구현 — KRX/공공데이터포털 실연동(키 필요) → `live` 프로필
 - [ ] 키 발급 후: `NEXT_PUBLIC_API_BASE`를 NCP 백엔드로 설정 → 실데이터 전환
 - [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
