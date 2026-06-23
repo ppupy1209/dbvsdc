@@ -1,0 +1,28 @@
+# Node / Next.js (web/)
+node_modules/
+.next/
+out/
+.vercel/
+*.log
+npm-debug.log*
+
+# Env / secrets (절대 커밋 금지)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Java / Spring (api/)
+target/
+build/
+.gradle/
+*.class
+HELP.md
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
