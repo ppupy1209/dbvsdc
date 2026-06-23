@@ -43,3 +43,21 @@ dbvsdc/
 ├── CLAUDE.md
 └── AGENTS.md
 ```
+
+## 로컬 실행
+
+### 백엔드 (Docker — 권장)
+로컬 JDK 버전과 무관하게 컨테이너(JDK17)로 빌드·실행. MySQL 포함.
+```
+docker compose up --build          # api + mysql 기동
+curl http://localhost:8090/api/index-returns   # 동작 확인 (기본 sample 데이터)
+docker compose down                # 정리 (-v 로 DB 볼륨까지)
+```
+- api: http://localhost:8090 (기본 `sample` 프로필 → DB 없이 동작)
+- mysql: localhost:3307 (`live` 프로필/실데이터 단계용)
+
+### 프론트엔드
+```
+npm --prefix web run dev           # http://localhost:3000 (점유 시 자동 포트)
+```
+백엔드 실데이터를 쓰려면 `web/.env.local`에 `NEXT_PUBLIC_API_BASE=http://localhost:8090` 설정.

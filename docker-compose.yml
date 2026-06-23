@@ -1,0 +1,46 @@
+# dbvsdc 로컬 실행 환경
+# - api: Spring 백엔드 (JDK17 컨테이너 빌드/실행, 기본 sample 프로필 → DB 없이도 동작)
+# - mysql: live 프로필/실데이터 단계용 (sample 모드에선 미사용)
+#
+# 사용:
+#   docker compose up --build        # 전체 기동
+#   curl http://localhost:8090/api/index-returns
+#   docker compose down              # 정리 (-v 로 DB 볼륨까지 삭제)
+#
+# live 프로필 테스트: api.environment의 SPRING_PROFILES_ACTIVE를 live로 변경
+# (단 LiveMarketDataSource 실연동 구현 후에만 의미 있음)
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: dbvsdc
+      MYSQL_USER: dbvsdc
+      MYSQL_PASSWORD: dbvsdc_pw
+      MYSQL_ROOT_PASSWORD: root_pw
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_pw"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  api:
+    build: ./api
+    environment:
+      SPRING_PROFILES_ACTIVE: sample
+      PORT: 8080
+      DB_URL: jdbc:mysql://mysql:3306/dbvsdc
+      DB_USER: dbvsdc
+      DB_PASSWORD: dbvsdc_pw
+    ports:
+      - "8090:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
