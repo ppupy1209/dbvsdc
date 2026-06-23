@@ -28,8 +28,15 @@
 
 ## API 스펙 합의 방식
 
-- Claude가 엔드포인트 요구사항(경로, 입력, 응답 JSON 스키마)을 정의 → Codex가 구현.
-- 새 엔드포인트/스키마 변경 시 이 저장소 문서에 기록.
+- 계약은 [docs/api-spec.md](docs/api-spec.md)에 정의됨. Codex는 이 스키마 그대로 Spring으로 구현.
+- 새 엔드포인트/스키마 변경 시 api-spec.md 갱신.
+
+## 첫 작업 (우선순위)
+
+1. **GET /api/index-returns** 구현 — 현재 프론트에 mock(`web/src/app/api/index-returns/route.ts`)으로 동작 중. 동일 JSON 스키마로 Spring 구현 + 일배치(외부 API → MySQL 캐싱). 프론트는 `NEXT_PUBLIC_API_BASE`만 바꾸면 전환됨.
+2. (추후) GET /api/dc-products — 통합연금포털 연동.
+
+블로커: 외부 API 키 발급(공공데이터포털/통합연금포털)과 NCP 서버는 사용자 액션 필요. 키 없이도 Spring 프로젝트 구조·스키마·배치 골격은 mock 소스로 선행 가능.
 
 ## 코드 리뷰
 

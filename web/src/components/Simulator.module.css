@@ -70,6 +70,29 @@
   margin-bottom: 1.4rem;
 }
 
+.sourceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.badgeSample,
+.badgeLive {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badgeSample {
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+}
+.badgeLive {
+  background: var(--accent-bg);
+  color: var(--accent-text);
+}
+
 .row {
   display: flex;
   align-items: center;

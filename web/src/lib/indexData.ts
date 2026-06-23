@@ -28,3 +28,17 @@ export const RETURNS: Record<IndexKey, number[]> = {
 };
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
+
+// 시뮬레이터가 소비하는 시장 데이터. 백엔드 API 응답도 이 형태로 맞춘다.
+export interface MarketData {
+  years: number[];
+  returns: Record<IndexKey, number[]>; // 각 배열 길이 = years.length, 단위 %
+  depositRate: number; // 안전자산 30% 몫 금리 (예: 0.03)
+}
+
+// API 미연동 시 폴백으로 쓰는 예시 데이터.
+export const SAMPLE_MARKET: MarketData = {
+  years: YEARS,
+  returns: RETURNS,
+  depositRate: 0.03,
+};

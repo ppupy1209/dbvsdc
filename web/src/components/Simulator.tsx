@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { INDEX_KEYS, INDEX_LABELS, IndexKey, YEARS } from "@/lib/indexData";
+import { useEffect, useMemo, useState } from "react";
+import { INDEX_KEYS, INDEX_LABELS, IndexKey, SAMPLE_MARKET } from "@/lib/indexData";
 import { formatMan, Mode, simulate } from "@/lib/calc";
+import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -30,10 +31,26 @@ export default function Simulator() {
   const [salary, setSalary] = useState(4000);
   const [raise, setRaise] = useState(3);
   const [wagePeak, setWagePeak] = useState(false);
+  const [market, setMarket] = useState(SAMPLE_MARKET);
+  const [source, setSource] = useState<DataSource>("sample");
+  const [asOf, setAsOf] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let alive = true;
+    fetchMarketData().then((res) => {
+      if (!alive) return;
+      setMarket(res.data);
+      setSource(res.source);
+      setAsOf(res.asOf);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const r = useMemo(
-    () => simulate(salary, raise, period, indices, mode, { wagePeak }),
-    [salary, raise, period, indices, mode, wagePeak]
+    () => simulate(salary, raise, period, indices, mode, market, { wagePeak }),
+    [salary, raise, period, indices, mode, market, wagePeak]
   );
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
@@ -68,12 +85,13 @@ export default function Simulator() {
   }
 
   const start = r.calendarStart;
+  const ys = market.years;
   const xLabels =
     mode === "back" && start !== null
       ? {
           a: String(start),
-          mid: String(YEARS[YEARS.length - r.n + Math.floor(r.n / 2)]),
-          end: String(YEARS[YEARS.length - 1]),
+          mid: String(ys[ys.length - r.n + Math.floor(r.n / 2)]),
+          end: String(ys[ys.length - 1]),
         }
       : { a: "지금", mid: `${Math.round(r.n / 2)}년`, end: `${r.n}년` };
 
@@ -104,7 +122,14 @@ export default function Simulator() {
       </div>
 
       <div className={s.card}>
-        <div className={s.cardLabel}>위험자산 70% — 담을 지수 (하나 선택)</div>
+        <div className={s.sourceRow}>
+          <span className={s.cardLabel} style={{ marginBottom: 0 }}>
+            위험자산 70% — 담을 지수 (하나 선택)
+          </span>
+          <span className={source === "live" ? s.badgeLive : s.badgeSample}>
+            {source === "live" ? `실데이터${asOf ? " · " + asOf : ""}` : "예시 데이터"}
+          </span>
+        </div>
         <div className={s.chips} role="radiogroup" aria-label="위험자산 지수 선택">
           {INDEX_KEYS.map((k) => (
             <button
@@ -167,7 +192,8 @@ export default function Simulator() {
           </button>
         </div>
         <div className={s.note}>
-          안전자산 30%: 연 <b>3.0%</b> 고정 (2026년 원리금보장형 기준 가정)
+          안전자산 30%: 연 <b>{(market.depositRate * 100).toFixed(1)}%</b> (2026년
+          원리금보장형 기준)
         </div>
       </div>
 

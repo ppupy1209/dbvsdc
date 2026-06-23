@@ -19,6 +19,7 @@
 | [docs/PROJECT.md](docs/PROJECT.md) | 비전·목표·제약·타깃 | 프로젝트 처음 파악할 때 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 인프라·데이터 흐름·기술스택 | 구조 작업 전 |
 | [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) | 외부 API 목록·키·호출제한·캐싱 | 데이터 연동 작업 전 |
+| [docs/api-spec.md](docs/api-spec.md) | 백엔드 REST 계약·MySQL 스키마 | 백엔드(Spring) 구현 전 |
 | [docs/TODO.md](docs/TODO.md) | 지금 무슨 작업 중인지 (세션 인계용) | **매 세션 시작/종료 시** |
 | [docs/DECISIONS/](docs/DECISIONS/) | ADR — 왜 이렇게 결정했나 | 결정 배경이 궁금할 때 |
 | [docs/DEVLOG/](docs/DEVLOG/) | 개발기 (문제해결 기록) | 회고/블로그 발행용 |

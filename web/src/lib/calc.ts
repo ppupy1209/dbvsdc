@@ -2,7 +2,7 @@
 // 모델 설명: docs/ARCHITECTURE.md "시뮬레이션 계산 모델"
 // ⚠️ 임시 모델 — 법정 산식 정밀화 전. 금액 단위는 모두 "만원".
 
-import { IndexKey, RETURNS, YEARS } from "./indexData";
+import { IndexKey, MarketData } from "./indexData";
 
 export type Mode = "back" | "fwd";
 
@@ -35,8 +35,8 @@ export interface SimResult {
 }
 
 // 특정 지수의 전체 기간 연평균 수익률(CAGR)
-export function cagrOf(k: IndexKey): number {
-  const r = RETURNS[k];
+export function cagrOf(k: IndexKey, data: MarketData): number {
+  const r = data.returns[k];
   let p = 1;
   for (const v of r) p *= 1 + v / 100;
   return Math.pow(p, 1 / r.length) - 1;
@@ -80,30 +80,32 @@ export function simulate(
   yearsInput: number,
   indices: IndexKey[],
   mode: Mode,
+  data: MarketData,
   opts: SimOptions = {}
 ): SimResult {
   const raise = raisePct / 100;
+  const dep = data.depositRate;
   const rets: number[] = [];
   let calendarStart: number | null = null;
   let n = yearsInput;
 
   if (mode === "back") {
-    const avail = YEARS.length;
+    const avail = data.years.length;
     n = Math.min(yearsInput, avail);
     const start = avail - n;
-    calendarStart = YEARS[start];
+    calendarStart = data.years[start];
     for (let k = 0; k < n; k++) {
       const yi = start + k;
       const idx = indices.length
-        ? indices.reduce((a, kk) => a + RETURNS[kk][yi], 0) / indices.length / 100
-        : DEPOSIT_RATE;
-      rets.push(0.3 * DEPOSIT_RATE + 0.7 * idx);
+        ? indices.reduce((a, kk) => a + data.returns[kk][yi], 0) / indices.length / 100
+        : dep;
+      rets.push(0.3 * dep + 0.7 * idx);
     }
   } else {
     const cg = indices.length
-      ? indices.reduce((a, kk) => a + cagrOf(kk), 0) / indices.length
-      : DEPOSIT_RATE;
-    const blend = 0.3 * DEPOSIT_RATE + 0.7 * cg;
+      ? indices.reduce((a, kk) => a + cagrOf(kk, data), 0) / indices.length
+      : dep;
+    const blend = 0.3 * dep + 0.7 * cg;
     for (let k = 0; k < n; k++) rets.push(blend);
   }
 

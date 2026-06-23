@@ -21,6 +21,10 @@
 - [~] DB/DC·세금 계산식 정밀화 — 법정 산식 근거 확인·임금피크 옵션·과세범위 정정 완료. 남은 것: 평균임금 상여 분리, 환율, IRP 추가납입 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
 - [x] 프론트 스캐폴딩 (Next.js, `web/`) — 시안을 실제 코드로 이식 ✅
 - [x] 랜딩/소개 섹션 (Intro: DB vs DC 30초 요약 + CTA) ✅
+- [x] 프론트 데이터 주도 전환 — API에서 시장데이터 fetch + 예시 폴백 + 소스 배지 ✅
+- [x] 백엔드 API 계약·MySQL 스키마 정의 ([api-spec.md](api-spec.md)) + mock 라우트 ✅
+- [ ] **Codex: Spring으로 GET /api/index-returns 구현** (mock 대체, 일배치→MySQL) — [api-spec.md](api-spec.md)
+- [ ] 키 발급 후: `NEXT_PUBLIC_API_BASE`를 NCP 백엔드로 설정 → 실데이터 전환
 - [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
 - [ ] 백엔드 API 스펙 정의 → Codex 위임 (AGENTS.md 규약대로)
 
