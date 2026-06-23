@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* dbvsdc 디자인 토큰 — 고급·심플 (평면 흰 카드, 얇은 보더, 색 2개) */
+:root {
+  --bg-page: #fafaf9;
+  --bg-surface: #ffffff;
+  --bg-secondary: #f4f4f2;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --text: #1c1c1a;
+  --text-secondary: #5f5e5a;
+  --text-tertiary: #908f88;
+  --accent: #185fa5; /* DC 블루 */
+  --accent-text: #0c447c;
+  --accent-bg: #e6f1fb;
+  --neutral: #6b6a64; /* DB 무채색 */
+  --danger: #a32d2d;
+  --warning: #854f0b;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #0d0d0c;
+    --bg-surface: #18181a;
+    --bg-secondary: #1f1f22;
+    --border: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.22);
+    --text: #ededec;
+    --text-secondary: #b4b2a9;
+    --text-tertiary: #888780;
+    --accent: #4f95df;
+    --accent-text: #b5d4f4;
+    --accent-bg: rgba(55, 138, 221, 0.15);
+    --neutral: #b4b2a9;
+    --danger: #f09595;
+    --warning: #fac775;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border-strong);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+  cursor: pointer;
+}
