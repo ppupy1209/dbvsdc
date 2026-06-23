@@ -1,0 +1,57 @@
+.foot {
+  border-top: 0.5px solid var(--border);
+  margin-top: 4rem;
+}
+.inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: var(--text);
+}
+.word {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.note {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.6;
+}
+.cols {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.cols a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.cols a:hover {
+  color: var(--text);
+}
+.copy {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2.5rem;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}

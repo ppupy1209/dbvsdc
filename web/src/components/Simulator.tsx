@@ -97,24 +97,27 @@ export default function Simulator() {
 
   return (
     <div className={s.wrap} id="simulator">
-      <div className={s.brandRow}>
-        <span className={s.brand}>dbvsdc</span>
-        <span className={s.brandSub}>DB vs DC · 백테스트 · 세금까지</span>
+      <div className={s.toolHead}>
+        <h2 className={s.toolTitle}>시뮬레이터</h2>
+        <p className={s.toolSub}>
+          안전자산 30% + 위험자산 70%(DC 법정 한도)로, 과거 수익률을 되짚거나 미래를
+          예측해 비교합니다.
+        </p>
       </div>
-      <p className={s.lede}>
-        안전자산 30% + 위험자산 70%(DC 법정 한도)로, 과거 실제 수익률을 되짚거나
-        미래를 예측해 비교합니다.
-      </p>
 
-      <div className={s.modeRow}>
+      <div className={s.modeRow} role="tablist" aria-label="모드">
         <button
-          className={`${s.btn} ${s.modeBtn} ${mode === "back" ? s.btnOn : ""}`}
+          role="tab"
+          aria-selected={mode === "back"}
+          className={`${s.modeBtn} ${mode === "back" ? s.modeBtnOn : ""}`}
           onClick={() => setMode("back")}
         >
           과거 백테스트
         </button>
         <button
-          className={`${s.btn} ${s.modeBtn} ${mode === "fwd" ? s.btnOn : ""}`}
+          role="tab"
+          aria-selected={mode === "fwd"}
+          className={`${s.modeBtn} ${mode === "fwd" ? s.modeBtnOn : ""}`}
           onClick={() => setMode("fwd")}
         >
           미래 예측

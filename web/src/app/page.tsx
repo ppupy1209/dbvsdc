@@ -1,11 +1,18 @@
+import Nav from "@/components/Nav";
 import Intro from "@/components/Intro";
 import Simulator from "@/components/Simulator";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   return (
-    <main>
-      <Intro />
-      <Simulator />
-    </main>
+    <>
+      <span id="top" />
+      <Nav />
+      <main>
+        <Intro />
+        <Simulator />
+      </main>
+      <Footer />
+    </>
   );
 }

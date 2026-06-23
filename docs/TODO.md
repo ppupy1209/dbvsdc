@@ -21,6 +21,7 @@
 - [~] DB/DC·세금 계산식 정밀화 — 법정 산식 근거 확인·임금피크 옵션·과세범위 정정 완료. 남은 것: 평균임금 상여 분리, 환율, IRP 추가납입 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
 - [x] 프론트 스캐폴딩 (Next.js, `web/`) — 시안을 실제 코드로 이식 ✅
 - [x] 랜딩/소개 섹션 (Intro: DB vs DC 30초 요약 + CTA) ✅
+- [x] 프리미엄 리디자인 — 심플·고급(잉크+블루), Pretendard, Nav/Footer, 히어로·시뮬레이터 리스타일 ✅
 - [x] 프론트 데이터 주도 전환 — API에서 시장데이터 fetch + 예시 폴백 + 소스 배지 ✅
 - [x] 백엔드 API 계약·MySQL 스키마 정의 ([api-spec.md](api-spec.md)) + mock 라우트 ✅
 - [x] **Codex: Spring 백엔드 스캐폴딩** (`api/`) — GET /api/index-returns 샘플모드 구현, MySQL 스키마/JPA/배치 골격, 프로필 분리, CORS ✅ (Claude 리뷰 통과)
