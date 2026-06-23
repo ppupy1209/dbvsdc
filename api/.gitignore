@@ -1,0 +1,17 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### IDE ###
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+### Logs ###
+*.log
+
+### Local env ###
+.env
+.env.*
+application-local.yml

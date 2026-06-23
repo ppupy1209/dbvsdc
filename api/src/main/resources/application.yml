@@ -1,0 +1,23 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: dbvsdc-api
+  profiles:
+    default: sample
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+
+app:
+  market-data-source: sample
+
+external:
+  apis:
+    data-go-kr-key: ${DATA_GO_KR_KEY:}
+    krx-api-key: ${KRX_API_KEY:}
+    kis-app-key: ${KIS_APP_KEY:}
+    kis-app-secret: ${KIS_APP_SECRET:}
