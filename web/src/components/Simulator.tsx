@@ -24,7 +24,8 @@ function points(arr: number[], n: number, maxY: number): string {
 
 export default function Simulator() {
   const [mode, setMode] = useState<Mode>("back");
-  const [indices, setIndices] = useState<IndexKey[]>(["sp", "nq", "ks"]);
+  // 지수는 하나만 선택 (중복 선택 불가). calc는 배열을 받으므로 단일 원소 배열로 유지.
+  const [indices, setIndices] = useState<IndexKey[]>(["sp"]);
   const [period, setPeriod] = useState(15);
   const [salary, setSalary] = useState(4000);
   const [raise, setRaise] = useState(3);
@@ -35,10 +36,8 @@ export default function Simulator() {
     [salary, raise, period, indices, mode, wagePeak]
   );
 
-  const toggleIndex = (k: IndexKey) =>
-    setIndices((prev) =>
-      prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]
-    );
+  // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
+  const selectIndex = (k: IndexKey) => setIndices([k]);
 
   const maxY = useMemo(() => {
     let m = 1;
@@ -105,13 +104,15 @@ export default function Simulator() {
       </div>
 
       <div className={s.card}>
-        <div className={s.cardLabel}>위험자산 70% — 담을 지수</div>
-        <div className={s.chips}>
+        <div className={s.cardLabel}>위험자산 70% — 담을 지수 (하나 선택)</div>
+        <div className={s.chips} role="radiogroup" aria-label="위험자산 지수 선택">
           {INDEX_KEYS.map((k) => (
             <button
               key={k}
+              role="radio"
+              aria-checked={indices.includes(k)}
               className={`${s.btn} ${indices.includes(k) ? s.btnOn : ""}`}
-              onClick={() => toggleIndex(k)}
+              onClick={() => selectIndex(k)}
             >
               {INDEX_LABELS[k]}
             </button>
