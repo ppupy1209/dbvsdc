@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .stem { fill: #16161a; }
+    .bowl { fill: #2563eb; }
+    @media (prefers-color-scheme: dark) {
+      .stem { fill: #f4f4f3; }
+      .bowl { fill: #6b9bf7; }
+    }
+  </style>
+  <path class="bowl" fill-rule="evenodd" d="M14 12 H30 A20 20 0 0 1 30 52 H14 Z M24 22 H30 A10 10 0 0 1 30 42 H24 Z"/>
+  <rect class="stem" x="14" y="12" width="11" height="40" rx="2"/>
+</svg>
