@@ -5,9 +5,8 @@ export default function Nav() {
     <header className={s.bar}>
       <div className={s.inner}>
         <a className={s.brand} href="#top">
-          <span className={s.mark} aria-hidden="true" />
           <span className={s.word}>
-            DB <span className={s.vs}>vs</span> DC
+            DB <span className={s.vs}>vs</span> <span className={s.dc}>DC</span>
           </span>
         </a>
         <nav className={s.links}>

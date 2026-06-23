@@ -6,9 +6,8 @@ export default function Footer() {
       <div className={s.inner}>
         <div className={s.left}>
           <div className={s.brandRow}>
-            <span className={s.mark} aria-hidden="true" />
             <span className={s.word}>
-              DB <span className={s.vs}>vs</span> DC
+              DB <span className={s.vs}>vs</span> <span className={s.dc}>DC</span>
             </span>
           </div>
           <p className={s.note}>

@@ -17,12 +17,6 @@
   gap: 8px;
   margin-bottom: 10px;
 }
-.mark {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  background: var(--text);
-}
 .word {
   font-size: 15px;
   font-weight: 600;
@@ -33,6 +27,9 @@
   color: var(--text-tertiary);
   font-style: italic;
   margin: 0 1px;
+}
+.dc {
+  color: var(--accent-text);
 }
 .note {
   font-size: 13px;

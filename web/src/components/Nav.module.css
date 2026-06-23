@@ -21,12 +21,6 @@
   text-decoration: none;
   color: var(--text);
 }
-.mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  background: var(--text);
-}
 .word {
   font-size: 16px;
   font-weight: 600;
@@ -37,6 +31,9 @@
   color: var(--text-tertiary);
   font-style: italic;
   margin: 0 1px;
+}
+.dc {
+  color: var(--accent-text);
 }
 .links {
   display: flex;
