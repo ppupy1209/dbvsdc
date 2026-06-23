@@ -28,10 +28,11 @@ export default function Simulator() {
   const [period, setPeriod] = useState(15);
   const [salary, setSalary] = useState(4000);
   const [raise, setRaise] = useState(3);
+  const [wagePeak, setWagePeak] = useState(false);
 
   const r = useMemo(
-    () => simulate(salary, raise, period, indices, mode),
-    [salary, raise, period, indices, mode]
+    () => simulate(salary, raise, period, indices, mode, { wagePeak }),
+    [salary, raise, period, indices, mode, wagePeak]
   );
 
   const toggleIndex = (k: IndexKey) =>
@@ -78,7 +79,7 @@ export default function Simulator() {
       : { a: "지금", mid: `${Math.round(r.n / 2)}년`, end: `${r.n}년` };
 
   return (
-    <div className={s.wrap}>
+    <div className={s.wrap} id="simulator">
       <div className={s.brandRow}>
         <span className={s.brand}>dbvsdc</span>
         <span className={s.brandSub}>DB vs DC · 백테스트 · 세금까지</span>
@@ -143,7 +144,7 @@ export default function Simulator() {
           />
           <span className={s.rowVal}>{salary.toLocaleString()}만원</span>
         </div>
-        <div className={s.row} style={{ marginBottom: "1.25rem" }}>
+        <div className={s.row}>
           <label className={s.rowLabel}>연봉 상승률</label>
           <input
             type="range"
@@ -154,6 +155,15 @@ export default function Simulator() {
             onChange={(e) => setRaise(+e.target.value)}
           />
           <span className={s.rowVal}>{raise.toFixed(1)}%</span>
+        </div>
+        <div style={{ marginBottom: "1.25rem" }}>
+          <button
+            className={`${s.btn} ${wagePeak ? s.btnOn : ""}`}
+            onClick={() => setWagePeak((v) => !v)}
+            aria-pressed={wagePeak}
+          >
+            임금피크제 가정 (DB 최종임금 30%↓)
+          </button>
         </div>
         <div className={s.note}>
           안전자산 30%: 연 <b>3.0%</b> 고정 (2026년 원리금보장형 기준 가정)
@@ -288,8 +298,17 @@ export default function Simulator() {
           </li>
           <li>매년 30/70 리밸런싱, 운용보수·거래비용은 미반영 가정입니다.</li>
           <li>
-            세금은 현행 퇴직소득세 산식 기반 <b>추정</b>이며, 실제 세액은
-            공제·수령방식·개인별 조건에 따라 달라집니다.
+            세금은 현행 퇴직소득세 산식 기반 <b>추정</b>입니다. DC 회사부담금과 그
+            운용수익 전액을 퇴직소득으로 과세(현행과 일치)했으나, 개인 추가납입(IRP
+            세액공제분)은 미반영입니다.
+          </li>
+          <li>
+            IRP 절세는 연금 실제수령 <b>10년 이내(30% 감면)</b> 가정이며, 11년 이상은
+            40% 감면입니다.
+          </li>
+          <li>
+            DB는 <b>퇴직 직전 평균임금</b> 기준이라 임금피크·강등에 취약합니다(옵션으로
+            가정 가능).
           </li>
           <li>미래 예측은 과거 평균 수익률을 그대로 가정한 단순 투영입니다.</li>
         </ul>

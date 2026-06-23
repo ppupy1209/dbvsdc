@@ -1,0 +1,127 @@
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 4rem 1.25rem 1rem;
+}
+
+.eyebrow {
+  font-size: 13px;
+  color: var(--accent-text);
+  background: var(--accent-bg);
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+}
+.titleAccent {
+  color: var(--accent-text);
+}
+
+.sub {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0 0 1.75rem;
+  max-width: 540px;
+}
+
+.cta {
+  display: inline-block;
+  font-size: 15px;
+  padding: 11px 22px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.12s;
+}
+.cta:hover {
+  opacity: 0.88;
+}
+
+.summaryLabel {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 3rem 0 12px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.card {
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.3rem;
+}
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tag {
+  font-size: 18px;
+  font-weight: 500;
+}
+.tagDb {
+  color: var(--neutral);
+}
+.tagDc {
+  color: var(--accent-text);
+}
+.tagSub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.oneLine {
+  font-size: 14px;
+  color: var(--text);
+  margin: 0 0 12px;
+  line-height: 1.55;
+}
+.rowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rowList li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 5px 0;
+  border-top: 0.5px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+.rowList li:first-child {
+  border-top: none;
+}
+.k {
+  color: var(--text-tertiary);
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.divider {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  margin: 2.5rem 0 0;
+}
+
+@media (max-width: 520px) {
+  .title {
+    font-size: 27px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

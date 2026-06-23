@@ -8,8 +8,15 @@ export type Mode = "back" | "fwd";
 
 // 안전자산 30% 몫의 금리 (2026년 원리금보장형 기준 가정)
 export const DEPOSIT_RATE = 0.03;
-// IRP 연금수령 시 퇴직소득세 감면율 (연금 실제수령 10년 이내 가정)
+// IRP 연금수령 시 퇴직소득세 감면율 (연금 실제수령 10년 이내 가정, 11년 이상은 0.4)
 export const IRP_DISCOUNT = 0.3;
+// 임금피크제 가정 시 퇴직 직전 평균임금 감액률 (DB 산정 기준 하락)
+export const PEAK_CUT = 0.3;
+
+export interface SimOptions {
+  // 임금피크제 적용 가정: DB는 퇴직 직전 평균임금 기준이라 최종임금이 깎이면 불리
+  wagePeak?: boolean;
+}
 
 export interface SimResult {
   n: number;
@@ -72,7 +79,8 @@ export function simulate(
   raisePct: number,
   yearsInput: number,
   indices: IndexKey[],
-  mode: Mode
+  mode: Mode,
+  opts: SimOptions = {}
 ): SimResult {
   const raise = raisePct / 100;
   const rets: number[] = [];
@@ -112,6 +120,13 @@ export function simulate(
     bal = (bal + monthly) * (1 + ret);
     dcArr.push(bal);
     dbArr.push(monthly * (i + 1));
+  }
+
+  // 임금피크제 가정: DB는 퇴직 직전 평균임금 기준이므로 최종 시점 금액만 감액.
+  // (DC는 이미 적립·운용된 금액이라 영향 없음 — 이것이 DB의 구조적 약점)
+  if (opts.wagePeak) {
+    const monthlyFinal = (salaryMan * Math.pow(1 + raise, n - 1)) / 12;
+    dbArr[n] = monthlyFinal * (1 - PEAK_CUT) * n;
   }
 
   const cagr = Math.pow(prod, 1 / n) - 1;

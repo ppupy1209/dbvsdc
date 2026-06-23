@@ -18,9 +18,10 @@
 - [ ] **도메인 dbvsdc.com 구매** (사용자 액션)
 - [ ] NCP 가입 + 크레딧 신청, 서버 상품 선택 ([ARCHITECTURE.md](ARCHITECTURE.md) 미해결 참조)
 - [ ] API 키 신청: 통합연금포털(승인 필요), 공공데이터포털 증권상품시세정보 (사용자 액션)
-- [ ] DB/DC·세금 계산식 정밀 확정 — 법정 산식 근거 + DC 운용수익 과세 분리 + 환율 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
+- [~] DB/DC·세금 계산식 정밀화 — 법정 산식 근거 확인·임금피크 옵션·과세범위 정정 완료. 남은 것: 평균임금 상여 분리, 환율, IRP 추가납입 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
 - [x] 프론트 스캐폴딩 (Next.js, `web/`) — 시안을 실제 코드로 이식 ✅
-- [ ] 프론트 후속: 랜딩/소개 섹션, 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
+- [x] 랜딩/소개 섹션 (Intro: DB vs DC 30초 요약 + CTA) ✅
+- [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
 - [ ] 백엔드 API 스펙 정의 → Codex 위임 (AGENTS.md 규약대로)
 
 ## 시안에서 합의된 설계 (이식 시 반영)
