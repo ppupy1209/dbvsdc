@@ -17,7 +17,7 @@
 
 - [ ] **도메인 dbvsdc.com 구매** (사용자 액션)
 - [ ] NCP 가입 + 크레딧 신청, 서버 상품 선택 ([ARCHITECTURE.md](ARCHITECTURE.md) 미해결 참조)
-- [ ] API 키 신청: 통합연금포털(승인 필요), 공공데이터포털 증권상품시세정보 (사용자 액션)
+- [~] ~~API 키 신청(공공데이터포털 ETF 시세)~~ → **불필요로 변경**. 지수 연간 수익률을 큐레이션 보유(2026-06-24 결정, DATA-SOURCES.md). 통합연금포털 키는 "상품으로 구성" 화면 할 때만.
 - [~] DB/DC·세금 계산식 정밀화 — 법정 산식 근거 확인·임금피크 옵션·과세범위 정정 완료. 남은 것: 평균임금 상여 분리, 환율, IRP 추가납입 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
 - [x] 프론트 스캐폴딩 (Next.js, `web/`) — 시안을 실제 코드로 이식 ✅
 - [x] 랜딩/소개 섹션 (Intro: DB vs DC 30초 요약 + CTA) ✅
@@ -27,8 +27,9 @@
 - [x] **Codex: Spring 백엔드 스캐폴딩** (`api/`) — GET /api/index-returns 샘플모드 구현, MySQL 스키마/JPA/배치 골격, 프로필 분리, CORS ✅ (Claude 리뷰 통과)
 - [x] 백엔드 빌드·실행 검증 — **Docker(JDK17 컨테이너)로 해결**. `docker compose up`, /api/index-returns 200 확인 ✅ (로컬 Java 8 우회)
 - [x] 프론트↔백엔드 end-to-end 연결 검증 — `web/.env.local`(NEXT_PUBLIC_API_BASE=http://localhost:8090) → 프론트가 백엔드 호출 200·CORS 정상·화면 반영 확인 ✅
-- [ ] `LiveMarketDataSource` 구현 — KRX/공공데이터포털 실연동(키 필요) → `live` 프로필
-- [ ] 키 발급 후: `NEXT_PUBLIC_API_BASE`를 NCP 백엔드로 설정 → 실데이터 전환
+- [x] 데이터 전략 확정 — 지수 연간 수익률 큐레이션 보유(현 데이터가 이미 정확함: S&P·KOSPI 공시값과 일치 검증). "예시값" 라벨 → "지수 연간 수익률"로 정정. API 키 불필요 ✅
+- [ ] **Codex(세션 리셋 후): Flyway 시드 V2** — indexData.ts 값을 MySQL `index_return_yearly`에 적재 + `LiveMarketDataSource`가 DB 읽어 서빙(외부 API/키 없음). ETF 실시간 연동 폐기.
+- [ ] 배포 후: `NEXT_PUBLIC_API_BASE`를 NCP 백엔드로 설정 → "실데이터" 배지 전환
 - [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
 - [ ] 백엔드 API 스펙 정의 → Codex 위임 (AGENTS.md 규약대로)
 

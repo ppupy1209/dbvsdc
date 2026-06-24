@@ -137,7 +137,7 @@ export default function Simulator() {
             위험자산 70% — 담을 지수 (하나 선택)
           </span>
           <span className={source === "live" ? s.badgeLive : s.badgeSample}>
-            {source === "live" ? `실데이터${asOf ? " · " + asOf : ""}` : "예시 데이터"}
+            {source === "live" ? `실데이터${asOf ? " · " + asOf : ""}` : "지수 연간 수익률"}
           </span>
         </div>
         <div className={s.chips} role="radiogroup" aria-label="위험자산 지수 선택">
@@ -343,12 +343,12 @@ export default function Simulator() {
         </div>
         <ul>
           <li>
-            지수 수익률은 <b>예시값</b>이며, 실서비스에서는 각 지수를 추종하는 국내 상장
-            ETF 실데이터로 대체됩니다.
+            지수 수익률은 각 지수의 <b>연간 등락률(가격수익률·현지통화 기준)</b>입니다.
+            출처: KRX·지수 공시.
           </li>
           <li>
-            해외 지수는 <b>환율(원/달러) 변동</b>이 수익률에 반영되어야 하나 현재
-            미반영입니다.
+            해외 지수는 <b>USD 기준</b>이라 원화로 환산(환율)하면 결과가 달라집니다 — 현재
+            환율 미반영.
           </li>
           <li>매년 30/70 리밸런싱, 운용보수·거래비용은 미반영 가정입니다.</li>
           <li>
