@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { INDEX_KEYS, INDEX_LABELS, IndexKey, SAMPLE_MARKET } from "@/lib/indexData";
 import { formatMan, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
+import IrpInfo from "./IrpInfo";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -312,6 +313,8 @@ export default function Simulator() {
         일시금 대신 <b>IRP로 연금수령</b>하면 퇴직소득세의 30%가 감면됩니다 (10년 이내
         수령 가정). DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
       </div>
+
+      <IrpInfo />
 
       <div className={s.accuracy}>
         <div className={s.accuracyTitle}>
