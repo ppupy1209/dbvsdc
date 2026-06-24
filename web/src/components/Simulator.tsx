@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   INDEX_KEYS,
   INDEX_LABELS,
@@ -15,20 +16,10 @@ import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
 const W = 600;
-const H = 250;
-const PAD = { l: 10, r: 10, t: 14, b: 34 };
+const H = 300;
+const PAD = { l: 56, r: 18, t: 20, b: 40 };
 const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
-
-function points(arr: number[], n: number, maxY: number): string {
-  return arr
-    .map((v, i) => {
-      const x = PAD.l + (i / n) * PLOT_W;
-      const y = PAD.t + (1 - v / maxY) * PLOT_H;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-}
 
 export default function Simulator() {
   const [mode, setMode] = useState<Mode>("back");
@@ -41,6 +32,8 @@ export default function Simulator() {
   const [market, setMarket] = useState(SAMPLE_MARKET);
   const [source, setSource] = useState<DataSource>("sample");
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
+  const [hover, setHover] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -63,17 +56,67 @@ export default function Simulator() {
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
 
-  const maxY = useMemo(() => {
+  const ys = market.years;
+  const maxBase = useMemo(() => {
     let m = 1;
     for (let i = 0; i <= r.n; i++) m = Math.max(m, r.dbArr[i], r.dcArr[i]);
-    return m * 1.08;
+    return m;
+  }, [r]);
+  const maxY = maxBase * 1.08;
+  const yfmt = (v: number) => {
+    v = Math.round(v);
+    if (v >= 10000) return `${(v / 10000).toFixed(v % 10000 === 0 ? 0 : 1)}억`;
+    if (v >= 1000) return `${Math.round(v / 1000)}천만`;
+    return `${v}만`;
+  };
+
+  // 좌표는 소수 1자리로 고정 → SSR/CSR 부동소수 차이로 인한 hydration mismatch 방지
+  const px = (i: number) => Math.round((PAD.l + (i / r.n) * PLOT_W) * 10) / 10;
+  const py = (v: number) => Math.round((PAD.t + (1 - v / maxY) * PLOT_H) * 10) / 10;
+  const ptStr = (arr: number[]) =>
+    arr.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
+  const dbPts = ptStr(r.dbArr);
+  const dcPts = ptStr(r.dcArr);
+  const areaD = `M${px(0).toFixed(1)},${(PAD.t + PLOT_H).toFixed(1)} L${dcPts.replace(
+    / /g,
+    " L"
+  )} L${px(r.n).toFixed(1)},${(PAD.t + PLOT_H).toFixed(1)} Z`;
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxBase);
+  const crossover = useMemo(() => {
+    for (let i = 1; i <= r.n; i++) if (r.dcArr[i] >= r.dbArr[i]) return i;
+    return null;
   }, [r]);
 
-  const dbPts = points(r.dbArr, r.n, maxY);
-  const dcPts = points(r.dcArr, r.n, maxY);
-  const areaD = `M${PAD.l},${PAD.t + PLOT_H} L${dcPts.replace(/ /g, " L")} L${(
-    PAD.l + PLOT_W
-  ).toFixed(1)},${PAD.t + PLOT_H} Z`;
+  const yearLabel = (i: number) => {
+    if (mode === "back") {
+      if (i === 0) return String(ys[ys.length - r.n] - 1);
+      return String(ys[ys.length - r.n + (i - 1)]);
+    }
+    return i === 0 ? "지금" : `${i}년`;
+  };
+  const xTickIdx = useMemo(() => {
+    const step = Math.max(1, Math.round(r.n / 5));
+    const arr: number[] = [];
+    for (let i = 0; i <= r.n; i += step) arr.push(i);
+    if (arr[arr.length - 1] !== r.n) arr.push(r.n);
+    return arr;
+  }, [r]);
+
+  const onMove = (e: ReactMouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const vbX = pt.matrixTransform(ctm.inverse()).x;
+    let idx = Math.round(((vbX - PAD.l) / PLOT_W) * r.n);
+    if (!Number.isFinite(idx)) return;
+    idx = Math.max(0, Math.min(r.n, idx));
+    setHover(idx);
+  };
 
   const diff = r.dcFinal - r.dbFinal;
   const near = Math.abs(diff) / Math.max(r.dbFinal, r.dcFinal, 1) < 0.005;
@@ -91,16 +134,6 @@ export default function Simulator() {
     verdictColor = "var(--text)";
   }
 
-  const start = r.calendarStart;
-  const ys = market.years;
-  const xLabels =
-    mode === "back" && start !== null
-      ? {
-          a: String(start),
-          mid: String(ys[ys.length - r.n + Math.floor(r.n / 2)]),
-          end: String(ys[ys.length - 1]),
-        }
-      : { a: "지금", mid: `${Math.round(r.n / 2)}년`, end: `${r.n}년` };
 
   return (
     <div className={s.wrap} id="simulator">
@@ -272,19 +305,37 @@ export default function Simulator() {
       </div>
 
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         className={s.chart}
         role="img"
         aria-label="연도별 DB와 DC 적립금 추이"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
       >
-        <line
-          x1={PAD.l}
-          y1={PAD.t + PLOT_H}
-          x2={W - PAD.r}
-          y2={PAD.t + PLOT_H}
-          stroke="var(--border)"
-          strokeWidth={1}
-        />
+        {yTicks.map((tv, i) => (
+          <g key={`y${i}`}>
+            <line
+              x1={PAD.l}
+              y1={py(tv)}
+              x2={W - PAD.r}
+              y2={py(tv)}
+              stroke="var(--border)"
+              strokeWidth={1}
+              strokeDasharray={i === 0 ? undefined : "2 5"}
+            />
+            <text
+              x={PAD.l - 8}
+              y={py(tv) + 3}
+              fontSize={10.5}
+              fill="var(--text-tertiary)"
+              textAnchor="end"
+            >
+              {i === 0 ? "0" : yfmt(tv)}
+            </text>
+          </g>
+        ))}
+
         <path d={areaD} fill="var(--accent)" fillOpacity={0.08} />
         <polyline
           points={dbPts}
@@ -300,18 +351,89 @@ export default function Simulator() {
           strokeWidth={2.5}
           strokeLinejoin="round"
         />
-        <text x={PAD.l} y={H - 14} fontSize={11} fill="var(--text-tertiary)" textAnchor="start">
-          {xLabels.a}
-        </text>
-        <text x={W / 2} y={H - 14} fontSize={11} fill="var(--text-tertiary)" textAnchor="middle">
-          {xLabels.mid}
-        </text>
-        <text x={W - PAD.r} y={H - 14} fontSize={11} fill="var(--text-tertiary)" textAnchor="end">
-          {xLabels.end}
-        </text>
-        <text x={PAD.l} y={24} fontSize={11} fill="var(--text-tertiary)" textAnchor="start">
-          {formatMan(maxY / 1.08)}
-        </text>
+
+        {crossover !== null && (
+          <g>
+            <line
+              x1={px(crossover)}
+              y1={PAD.t}
+              x2={px(crossover)}
+              y2={PAD.t + PLOT_H}
+              stroke="var(--accent)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              opacity={0.5}
+            />
+            <text
+              x={px(crossover) > W - 96 ? px(crossover) - 6 : px(crossover) + 6}
+              y={PAD.t + 12}
+              fontSize={11}
+              fill="var(--accent-text)"
+              textAnchor={px(crossover) > W - 96 ? "end" : "start"}
+            >
+              {(mode === "back" ? yearLabel(crossover) : `${crossover}년차`) + " 역전"}
+            </text>
+          </g>
+        )}
+
+        <circle cx={px(r.n)} cy={py(r.dbArr[r.n])} r={3} fill="var(--neutral)" />
+        <circle cx={px(r.n)} cy={py(r.dcArr[r.n])} r={3.5} fill="var(--accent)" />
+
+        {xTickIdx.map((i) => (
+          <text
+            key={`x${i}`}
+            x={px(i)}
+            y={H - 14}
+            fontSize={10.5}
+            fill="var(--text-tertiary)"
+            textAnchor={i === 0 ? "start" : i === r.n ? "end" : "middle"}
+          >
+            {yearLabel(i)}
+          </text>
+        ))}
+
+        {hover !== null && (
+          <g>
+            <line
+              x1={px(hover)}
+              y1={PAD.t}
+              x2={px(hover)}
+              y2={PAD.t + PLOT_H}
+              stroke="var(--border-strong)"
+              strokeWidth={1}
+            />
+            <circle cx={px(hover)} cy={py(r.dbArr[hover])} r={3.5} fill="var(--neutral)" />
+            <circle cx={px(hover)} cy={py(r.dcArr[hover])} r={4} fill="var(--accent)" />
+            <g>
+              <rect
+                x={Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138)}
+                y={PAD.t + 4}
+                width={138}
+                height={64}
+                rx={8}
+                fill="var(--bg-surface)"
+                stroke="var(--border-strong)"
+                strokeWidth={0.5}
+              />
+              {(() => {
+                const tx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138) + 12;
+                return (
+                  <>
+                    <text x={tx} y={PAD.t + 22} fontSize={11} fill="var(--text-secondary)">
+                      {yearLabel(hover)}
+                    </text>
+                    <text x={tx} y={PAD.t + 40} fontSize={11.5} fill="var(--neutral)">
+                      DB {formatMan(r.dbArr[hover])}
+                    </text>
+                    <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
+                      DC {formatMan(r.dcArr[hover])}
+                    </text>
+                  </>
+                );
+              })()}
+            </g>
+          </g>
+        )}
       </svg>
 
       <div className={s.grid2}>
