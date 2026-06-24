@@ -10,18 +10,12 @@ export default function Intro() {
         <span className={s.accent}>DC로 굴릴까.</span>
       </h1>
       <p className={s.sub}>
-        내 연봉과 근속으로 두 제도를 나란히 시뮬레이션. 과거 수익률 백테스트와 세금까지,
-        30초면 답이 나옵니다.
+        내 연봉과 근속으로 두 제도를 나란히 시뮬레이션.
+        <br />
+        과거 수익률 백테스트와 세금까지, 30초면 답이 나옵니다.
       </p>
-      <div className={s.cta}>
-        <a className={s.primary} href="#simulator">
-          내 조건으로 계산
-        </a>
-        <a className={s.ghost} href="#compare">
-          DB vs DC 차이
-        </a>
-      </div>
 
+      <h2 className={s.compareTitle}>DB형과 DC형, 무엇이 다를까</h2>
       <div className={s.compare} id="compare">
         <div className={s.card}>
           <div className={s.cardHead}>

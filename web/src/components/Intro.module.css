@@ -65,11 +65,17 @@
   background: var(--bg-secondary);
 }
 
+.compareTitle {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 2.75rem 0 1.25rem;
+}
 .compare {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 4rem;
+  margin-top: 0;
   text-align: left;
   scroll-margin-top: 80px;
 }

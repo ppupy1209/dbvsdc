@@ -60,6 +60,8 @@ body {
     "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   line-height: 1.6;
   font-variant-numeric: tabular-nums;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
