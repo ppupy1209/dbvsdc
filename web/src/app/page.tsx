@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
-import Toc from "@/components/Toc";
 import Intro from "@/components/Intro";
 import Simulator from "@/components/Simulator";
+import IrpInfo from "@/components/IrpInfo";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -9,10 +9,12 @@ export default function Home() {
     <>
       <span id="top" />
       <Nav />
-      <Toc />
       <main>
         <Intro />
-        <Simulator />
+        <section className="band">
+          <Simulator />
+        </section>
+        <IrpInfo />
       </main>
       <Footer />
     </>

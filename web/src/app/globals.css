@@ -66,6 +66,13 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* 섹션 구분용 옅은 배경 밴드 (전체 폭) */
+.band {
+  background: var(--bg-secondary);
+  border-top: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;

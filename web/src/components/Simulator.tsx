@@ -11,7 +11,6 @@ import {
 } from "@/lib/indexData";
 import { formatMan, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
-import IrpInfo from "./IrpInfo";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -138,7 +137,11 @@ export default function Simulator() {
   return (
     <div className={s.wrap} id="simulator">
       <div className={s.toolHead}>
-        <h2 className={s.toolTitle}>시뮬레이터</h2>
+        <div className={s.kicker}>
+          <span className={s.kdot} aria-hidden="true" />
+          시뮬레이터
+        </div>
+        <h2 className={s.toolTitle}>내 조건으로 직접 비교</h2>
         <p className={s.toolSub}>
           안전자산 30% + 위험자산 70%(DC 법정 한도)로, 과거 수익률을 되짚거나 미래를
           예측해 비교합니다.
@@ -456,8 +459,6 @@ export default function Simulator() {
         일시금 대신 <b>IRP로 연금수령</b>하면 퇴직소득세의 30%가 감면됩니다 (10년 이내
         수령 가정). DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
       </div>
-
-      <IrpInfo />
 
       <div className={s.accuracy}>
         <div className={s.accuracyTitle}>

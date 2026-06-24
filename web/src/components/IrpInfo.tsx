@@ -3,6 +3,10 @@ import s from "./IrpInfo.module.css";
 export default function IrpInfo() {
   return (
     <section className={s.wrap} id="irp">
+      <div className={s.kicker}>
+        <span className={s.kdot} aria-hidden="true" />
+        IRP
+      </div>
       <h2 className={s.title}>
         IRP란? <span className={s.titleSub}>개인형 퇴직연금</span>
       </h2>
