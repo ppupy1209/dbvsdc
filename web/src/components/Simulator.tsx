@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { INDEX_KEYS, INDEX_LABELS, IndexKey, SAMPLE_MARKET } from "@/lib/indexData";
+import {
+  INDEX_KEYS,
+  INDEX_LABELS,
+  INDEX_META,
+  IndexKey,
+  SAMPLE_MARKET,
+} from "@/lib/indexData";
 import { formatMan, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import IrpInfo from "./IrpInfo";
@@ -147,6 +153,21 @@ export default function Simulator() {
             </button>
           ))}
         </div>
+
+        {indices[0] && (
+          <div className={s.indexInfo}>
+            <div className={s.indexInfoHead}>{INDEX_LABELS[indices[0]]}</div>
+            <p className={s.indexInfoDesc}>{INDEX_META[indices[0]].desc}</p>
+            <div className={s.indexCompanies}>
+              <span className={s.indexCompaniesLabel}>주요 기업</span>
+              {INDEX_META[indices[0]].companies.map((c) => (
+                <span key={c} className={s.companyTag}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className={s.row}>
           <label className={s.rowLabel}>

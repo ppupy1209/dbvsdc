@@ -29,6 +29,34 @@ export const RETURNS: Record<IndexKey, number[]> = {
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
 
+// 지수 설명 + 주요 구성 기업 (선택 시 표시)
+export interface IndexMeta {
+  desc: string;
+  companies: string[];
+}
+export const INDEX_META: Record<IndexKey, IndexMeta> = {
+  sp: {
+    desc: "미국 대형주 500개로 구성된 미국 대표 지수. 시가총액 가중 방식으로 미국 경제 전반을 폭넓게 반영합니다.",
+    companies: ["애플", "마이크로소프트", "엔비디아", "아마존", "알파벳"],
+  },
+  nq: {
+    desc: "나스닥 상장 비금융 대형주 100개로 구성. 기술주 비중이 높아 성장성이 크지만 변동성도 큰 편입니다.",
+    companies: ["애플", "마이크로소프트", "엔비디아", "아마존", "메타"],
+  },
+  dj: {
+    desc: "미국 대표 우량주 30개로 구성된 가장 오래된 지수. 가격가중 방식이라 고가 종목의 영향이 큽니다.",
+    companies: ["골드만삭스", "마이크로소프트", "캐터필러", "유나이티드헬스", "애플"],
+  },
+  ks: {
+    desc: "한국거래소 유가증권시장 전체를 대표하는 지수. 한국 경제와 대형 제조·IT 기업을 반영합니다.",
+    companies: ["삼성전자", "SK하이닉스", "LG에너지솔루션", "삼성바이오로직스", "현대차"],
+  },
+  kq: {
+    desc: "기술·성장 중소형주 중심의 한국 시장 지수. 바이오·2차전지 비중이 높고 변동성이 큽니다.",
+    companies: ["에코프로비엠", "알테오젠", "에코프로", "HLB", "엔켐"],
+  },
+};
+
 // 시뮬레이터가 소비하는 시장 데이터. 백엔드 API 응답도 이 형태로 맞춘다.
 export interface MarketData {
   years: number[];

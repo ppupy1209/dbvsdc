@@ -110,6 +110,44 @@
   border-color: var(--accent);
 }
 
+.indexInfo {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.5rem;
+}
+.indexInfoHead {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-text);
+  margin-bottom: 6px;
+}
+.indexInfoDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+.indexCompanies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.indexCompaniesLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-right: 4px;
+}
+.companyTag {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
 .row {
   display: flex;
   align-items: center;
