@@ -2,9 +2,15 @@
 
 > 매 세션 **시작 시 읽고**, **종료 시 갱신**한다. 다른 PC/세션이 여기만 보고 이어받을 수 있어야 한다.
 
-## 지금 상태 (2026-06-23)
+## 지금 상태 (2026-06-25)
 
-기획·인프라 확정 + GitHub 연결. **프론트 MVP 코드 완성** — Next.js 16(`web/`)에 시뮬레이터 구현(연도별 그래프 / 30·70 백테스트 / 과거·미래 모드 / 세금·IRP / 정확도 문구). `npm run build` 통과, 로컬 렌더 확인 완료.
+프론트 MVP + 백엔드 스캐폴딩 완료. **Docker/CI·CD 정비 + 배포 인프라 AWS 전환 완료.**
+- 로컬: `docker compose up --build` 하나로 mysql+api+web 전체 기동(검증 완료).
+- 운영: `docker-compose.prod.yml`(GHCR 이미지 pull) + `docs/DEPLOY.md`. RDS 미사용(MySQL 컨테이너).
+- CI: 푸시마다 gradle build + npm build. CD: main→GHCR(`dbvsdc-api`/`dbvsdc-web`).
+- 백엔드 빌드툴 **Maven→Gradle** 전환(Docker 빌드 검증). 인프라 **NCP→AWS** ([ADR 0002](DECISIONS/0002-infra-aws-docker.md)).
+
+(이전) **프론트 MVP 코드 완성** — Next.js 16(`web/`)에 시뮬레이터 구현(연도별 그래프 / 30·70 백테스트 / 과거·미래 모드 / 세금·IRP / 정확도 문구). `npm run build` 통과, 로컬 렌더 확인 완료.
 
 ### web/ 구조
 - `src/lib/indexData.ts` — 지수·연도별 수익률(예시값 1995~2024)
@@ -16,7 +22,10 @@
 ## 다음 할 일 (우선순위 순)
 
 - [ ] **도메인 dbvsdc.com 구매** (사용자 액션)
-- [ ] NCP 가입 + 크레딧 신청, 서버 상품 선택 ([ARCHITECTURE.md](ARCHITECTURE.md) 미해결 참조)
+- [ ] **AWS EC2 t3.micro 2번째 인스턴스 프로비저닝** (사용자 액션) → 스왑 2GB 설정 + GHCR 로그인 + `docker-compose.prod.yml`로 기동 ([docs/DEPLOY.md](DEPLOY.md))
+- [ ] 배포 후 도메인 연결 + 리버스 프록시(nginx/Caddy) + HTTPS
+- [x] Docker/CI·CD 정비 + 인프라 AWS 전환 + Maven→Gradle ✅ (2026-06-25, ADR 0002)
+- [~] ~~NCP 가입 + 크레딧 신청~~ → **폐기**. AWS로 변경 ([ADR 0002](DECISIONS/0002-infra-aws-docker.md))
 - [~] ~~API 키 신청(공공데이터포털 ETF 시세)~~ → **불필요로 변경**. 지수 연간 수익률을 큐레이션 보유(2026-06-24 결정, DATA-SOURCES.md). 통합연금포털 키는 "상품으로 구성" 화면 할 때만.
 - [~] DB/DC·세금 계산식 정밀화 — 법정 산식 근거 확인·임금피크 옵션·과세범위 정정 완료. 남은 것: 평균임금 상여 분리, 환율, IRP 추가납입 ([ARCHITECTURE.md](ARCHITECTURE.md) "확정 필요")
 - [x] 프론트 스캐폴딩 (Next.js, `web/`) — 시안을 실제 코드로 이식 ✅
@@ -46,7 +55,9 @@
 
 ## 결정 로그 (요약 — 상세는 DECISIONS/)
 
-- 2026-06-23: 인프라 NCP 확정 ([ADR 0001](DECISIONS/0001-infra-ncp.md))
+- 2026-06-23: 인프라 NCP 확정 ([ADR 0001](DECISIONS/0001-infra-ncp.md)) — **2026-06-25 대체됨**
 - 2026-06-23: 백엔드 Java/Spring + MySQL (사용자 제약)
 - 2026-06-23: 프론트 Vercel + Next.js
 - 2026-06-23: 도메인 dbvsdc.com
+- 2026-06-25: 인프라 **AWS EC2 + Docker/GHCR, RDS 미사용** ([ADR 0002](DECISIONS/0002-infra-aws-docker.md))
+- 2026-06-25: 백엔드 빌드툴 Maven→Gradle / 프론트 Vite 전환 안 함(SEO)

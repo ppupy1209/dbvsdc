@@ -1,5 +1,7 @@
-target/
-!.mvn/wrapper/maven-wrapper.jar
+build/
+.gradle/
+# gradle-wrapper.jar 는 커밋해야 함 (CI/Docker가 wrapper로 빌드)
+!gradle/wrapper/gradle-wrapper.jar
 
 ### IDE ###
 .idea/

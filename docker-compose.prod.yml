@@ -1,0 +1,59 @@
+# 운영(AWS EC2) 배포용 — 로컬에서 build 하지 않고 GHCR 이미지를 받아 실행한다.
+# RDS 미사용: MySQL 을 같은 서버의 컨테이너로 운영(추가 비용 0).
+#
+# EC2에서 사용:
+#   docker compose -f docker-compose.prod.yml pull          # 최신 이미지 받기
+#   docker compose -f docker-compose.prod.yml up -d          # 전체 기동(DB 포함, live 단계)
+#
+#   # 지금(sample 단계, DB 불필요) — RAM 아끼려면 DB 빼고 api+web만:
+#   docker compose -f docker-compose.prod.yml up -d --no-deps api web
+#
+# 비밀번호 등은 .env 파일로 주입(같은 폴더):
+#   DB_PASSWORD=...  DB_ROOT_PASSWORD=...  SPRING_PROFILES_ACTIVE=live
+name: dbvsdc
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: dbvsdc
+      MYSQL_USER: dbvsdc
+      MYSQL_PASSWORD: ${DB_PASSWORD:-dbvsdc_pw}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_pw}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-root_pw}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  api:
+    image: ghcr.io/ppupy1209/dbvsdc-api:latest
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-sample}
+      # 1GB 서버 보호용 힙 상한. 셋 다(api+mysql+web) 동시에 빡빡하면 -Xmx256m 로 더 낮춰도 됨.
+      JAVA_OPTS: "-Xms64m -Xmx384m"
+      DB_URL: jdbc:mysql://mysql:3306/dbvsdc
+      DB_USER: dbvsdc
+      DB_PASSWORD: ${DB_PASSWORD:-dbvsdc_pw}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/ppupy1209/dbvsdc-web:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  mysql-data:

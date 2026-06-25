@@ -1,13 +1,12 @@
-# dbvsdc 로컬 실행 환경
-# - api: Spring 백엔드 (JDK17 컨테이너 빌드/실행, 기본 sample 프로필 → DB 없이도 동작)
-# - mysql: live 프로필/실데이터 단계용 (sample 모드에선 미사용)
-#
-# 사용:
-#   docker compose up --build        # 전체 기동
+# dbvsdc 로컬 실행 환경 (전체 서비스 한번에)
+#   docker compose up --build     # mysql + api + web 기동
+#   open http://localhost:3000    # 프론트
 #   curl http://localhost:8090/api/index-returns
-#   docker compose down              # 정리 (-v 로 DB 볼륨까지 삭제)
+#   docker compose down           # 정리 (-v 로 DB 볼륨까지 삭제)
 #
-# live 프로필 테스트: api.environment의 SPRING_PROFILES_ACTIVE를 live로 변경
+# ※ 클라우드(운영) 배포는 이 파일이 아니라 각 서비스의 Dockerfile 이미지로:
+#     web/Dockerfile, api/Dockerfile
+# live 프로필: api.environment의 SPRING_PROFILES_ACTIVE를 live로 변경
 # (단 LiveMarketDataSource 실연동 구현 후에만 의미 있음)
 
 services:
@@ -41,6 +40,20 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* 는 빌드 시 번들에 박힘. 비워두면 Next 내장 /api 목 라우트 사용.
+        NEXT_PUBLIC_API_BASE: ""
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   mysql-data:
