@@ -2,13 +2,15 @@
 
 > 매 세션 **시작 시 읽고**, **종료 시 갱신**한다. 다른 PC/세션이 여기만 보고 이어받을 수 있어야 한다.
 
-## 지금 상태 (2026-06-25)
+## 지금 상태 (2026-06-26)
 
-프론트 MVP + 백엔드 스캐폴딩 완료. **Docker/CI·CD 정비 + 배포 인프라 AWS 전환 완료.**
-- 로컬: `docker compose up --build` 하나로 mysql+api+web 전체 기동(검증 완료).
-- 운영: `docker-compose.prod.yml`(GHCR 이미지 pull) + `docs/DEPLOY.md`. RDS 미사용(MySQL 컨테이너).
-- CI: 푸시마다 gradle build + npm build. CD: main→GHCR(`dbvsdc-api`/`dbvsdc-web`).
-- 백엔드 빌드툴 **Maven→Gradle** 전환(Docker 빌드 검증). 인프라 **NCP→AWS** ([ADR 0002](DECISIONS/0002-infra-aws-docker.md)).
+프론트 MVP + 백엔드 스캐폴딩 + 인프라(AWS/Docker/CI·CD) 완료. **프론트 UI/로직 다듬기 진행 중.**
+- 인프라: 로컬 `docker compose up --build`(mysql+api+web), 운영 `docker-compose.prod.yml`(GHCR pull, RDS 미사용),
+  CI(gradle+npm)·CD(main→GHCR), Maven→Gradle, NCP→AWS ([ADR 0002](DECISIONS/0002-infra-aws-docker.md)).
+- UI/로직(2026-06-26): 다크/라이트 토글, **수익률을 배당 재투자 포함(총수익)으로 전환**,
+  미래 모드 역전표시·임금피크 옵션 제거, 호버 시 연도별 DC 수익률, 지수별 연평균 수익률 표시,
+  '미래 예측'→'미래 시뮬레이션', 면책·정확도 → 푸터 '유의사항' 통합. (상세 DEVLOG 2026-06-26)
+- ⚠️ **배당은 지수별 평균 배당수익률 연 고정 가정**(indexData.ts `DIVIDEND_YIELD`) — 근사치, 추후 실제 데이터로 교체 필요.
 
 (이전) **프론트 MVP 코드 완성** — Next.js 16(`web/`)에 시뮬레이터 구현(연도별 그래프 / 30·70 백테스트 / 과거·미래 모드 / 세금·IRP / 정확도 문구). `npm run build` 통과, 로컬 렌더 확인 완료.
 
@@ -38,7 +40,9 @@
 - [x] 프론트↔백엔드 end-to-end 연결 검증 — `web/.env.local`(NEXT_PUBLIC_API_BASE=http://localhost:8090) → 프론트가 백엔드 호출 200·CORS 정상·화면 반영 확인 ✅
 - [x] 데이터 전략 확정 — 지수 연간 수익률 큐레이션 보유(현 데이터가 이미 정확함: S&P·KOSPI 공시값과 일치 검증). "예시값" 라벨 → "지수 연간 수익률"로 정정. API 키 불필요 ✅
 - [ ] **Codex(세션 리셋 후): Flyway 시드 V2** — indexData.ts 값을 MySQL `index_return_yearly`에 적재 + `LiveMarketDataSource`가 DB 읽어 서빙(외부 API/키 없음). ETF 실시간 연동 폐기.
-- [ ] 배포 후: `NEXT_PUBLIC_API_BASE`를 NCP 백엔드로 설정 → "실데이터" 배지 전환
+- [ ] **배당 데이터 정밀화** — 현재 `DIVIDEND_YIELD` 연 고정 평균 가정 → 지수별 연도별 실제 배당수익률 또는 총수익(TR) 지수 시계열로 교체. Flyway 시드/`indexData.ts` 양쪽 반영.
+- [x] UI/로직 다듬기 (다크모드·총수익·미래 시뮬레이션·호버 DC수익률·연평균 표시 등) ✅ (2026-06-26)
+- [ ] 배포 후: `NEXT_PUBLIC_API_BASE`를 AWS 백엔드로 설정 → "실데이터" 배지 전환
 - [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
 - [ ] 백엔드 API 스펙 정의 → Codex 위임 (AGENTS.md 규약대로)
 
@@ -46,7 +50,7 @@
 
 - 컨셉: 고급·심플, 평면 흰 카드, 색 2개(DB 무채색 / DC 블루)
 - 시뮬레이터: 입력(지수 70% 칩 / 기간 1~30년 / 연봉 / 상승률), 안전자산 30% 예금 3.0% 고정(2026)
-- 모드 토글: 과거 백테스트 ↔ 미래 예측
+- 모드 토글: 과거 백테스트 ↔ 미래 시뮬레이션
 - 출력: 연도별 그래프(역전/변동), 세전 카드, 세금표(일시금 vs IRP), IRP 절세 강조, 정확도 안내 박스
 
 ## 대기/블로커
@@ -61,3 +65,5 @@
 - 2026-06-23: 도메인 dbvsdc.com
 - 2026-06-25: 인프라 **AWS EC2 + Docker/GHCR, RDS 미사용** ([ADR 0002](DECISIONS/0002-infra-aws-docker.md))
 - 2026-06-25: 백엔드 빌드툴 Maven→Gradle / 프론트 Vite 전환 안 함(SEO)
+- 2026-06-26: 수익률을 **배당 재투자 포함(총수익)**으로 — 평균 배당수익률 연 고정 가정(근사·고지)
+- 2026-06-26: 다크/라이트 수동 토글 도입 / '미래 예측'→'미래 시뮬레이션'
