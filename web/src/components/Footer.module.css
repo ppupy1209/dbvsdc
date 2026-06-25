@@ -6,51 +6,38 @@
   max-width: 760px;
   margin: 0 auto;
   padding: 2.5rem 1.25rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  flex-wrap: wrap;
 }
-.brandRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.word {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.vs {
-  font-weight: 400;
-  color: var(--text-tertiary);
-  font-style: italic;
-  margin: 0 1px;
-}
-.dc {
-  color: var(--accent-text);
-}
-.note {
+.notesTitle {
   font-size: 13px;
+  font-weight: 600;
   color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.notes {
+  list-style: none;
   margin: 0;
-  max-width: 360px;
-  line-height: 1.6;
+  padding-left: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.7;
 }
-.cols {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 13.5px;
+.notes li {
+  position: relative;
+  padding-left: 15px;
+  margin-bottom: 5px;
 }
-.cols a {
+.notes li::before {
+  content: "*";
+  position: absolute;
+  left: 1px;
+  top: 0.15em;
+  color: var(--text-tertiary);
+}
+.notes b {
+  font-weight: 500;
   color: var(--text-secondary);
-  text-decoration: none;
 }
-.cols a:hover {
-  color: var(--text);
-}
+
 .copy {
   max-width: 760px;
   margin: 0 auto;

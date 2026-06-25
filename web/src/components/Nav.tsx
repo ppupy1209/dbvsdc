@@ -1,4 +1,5 @@
 import s from "./Nav.module.css";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Nav() {
   return (
@@ -9,10 +10,7 @@ export default function Nav() {
             DB <span className={s.vs}>vs</span> <span className={s.dc}>DC</span>
           </span>
         </a>
-        <nav className={s.links}>
-          <a href="#simulator">시뮬레이터</a>
-          <a href="#irp">IRP</a>
-        </nav>
+        <ThemeToggle />
       </div>
     </header>
   );

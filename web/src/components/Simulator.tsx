@@ -9,7 +9,7 @@ import {
   IndexKey,
   SAMPLE_MARKET,
 } from "@/lib/indexData";
-import { formatMan, Mode, simulate } from "@/lib/calc";
+import { cagrOf, formatMan, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -27,7 +27,6 @@ export default function Simulator() {
   const [period, setPeriod] = useState(15);
   const [salary, setSalary] = useState(4000);
   const [raise, setRaise] = useState(3);
-  const [wagePeak, setWagePeak] = useState(false);
   const [market, setMarket] = useState(SAMPLE_MARKET);
   const [source, setSource] = useState<DataSource>("sample");
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
@@ -48,8 +47,8 @@ export default function Simulator() {
   }, []);
 
   const r = useMemo(
-    () => simulate(salary, raise, period, indices, mode, market, { wagePeak }),
-    [salary, raise, period, indices, mode, market, wagePeak]
+    () => simulate(salary, raise, period, indices, mode, market),
+    [salary, raise, period, indices, mode, market]
   );
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
@@ -145,6 +144,7 @@ export default function Simulator() {
       </div>
 
       <div className={s.modeRow} role="tablist" aria-label="모드">
+        <span className={s.modeThumb} data-mode={mode} aria-hidden="true" />
         <button
           role="tab"
           aria-selected={mode === "back"}
@@ -159,7 +159,7 @@ export default function Simulator() {
           className={`${s.modeBtn} ${mode === "fwd" ? s.modeBtnOn : ""}`}
           onClick={() => setMode("fwd")}
         >
-          미래 예측
+          미래 시뮬레이션
         </button>
       </div>
 
@@ -190,6 +190,15 @@ export default function Simulator() {
           <div className={s.indexInfo}>
             <div className={s.indexInfoHead}>{INDEX_LABELS[indices[0]]}</div>
             <p className={s.indexInfoDesc}>{INDEX_META[indices[0]].desc}</p>
+            <div className={s.indexAvg}>
+              <span className={s.indexAvgLabel}>연평균 수익률</span>
+              <span className={s.indexAvgVal}>
+                연 {(cagrOf(indices[0], market) * 100).toFixed(1)}%
+              </span>
+              <span className={s.indexAvgNote}>
+                {ys[0]}~{ys[ys.length - 1]} · 배당 재투자 포함
+              </span>
+            </div>
             <div className={s.indexCompanies}>
               <span className={s.indexCompaniesLabel}>주요 기업</span>
               {INDEX_META[indices[0]].companies.map((c) => (
@@ -203,7 +212,7 @@ export default function Simulator() {
 
         <div className={s.row}>
           <label className={s.rowLabel}>
-            {mode === "back" ? "백테스트 기간" : "예측 기간"}
+            {mode === "back" ? "백테스트 기간" : "시뮬레이션 기간"}
           </label>
           <input
             type="range"
@@ -232,21 +241,12 @@ export default function Simulator() {
           <input
             type="range"
             min={0}
-            max={10}
+            max={15}
             step={0.5}
             value={raise}
             onChange={(e) => setRaise(+e.target.value)}
           />
           <span className={s.rowVal}>{raise.toFixed(1)}%</span>
-        </div>
-        <div style={{ marginBottom: "1.25rem" }}>
-          <button
-            className={`${s.btn} ${wagePeak ? s.btnOn : ""}`}
-            onClick={() => setWagePeak((v) => !v)}
-            aria-pressed={wagePeak}
-          >
-            임금피크제 가정 (DB 최종임금 30%↓)
-          </button>
         </div>
         <div className={s.note}>
           안전자산 30%: 연 <b>{(market.depositRate * 100).toFixed(1)}%</b> (2026년
@@ -256,7 +256,7 @@ export default function Simulator() {
 
       <div className={s.verdict}>
         <div className={s.verdictTop}>
-          {mode === "back" ? `최근 ${r.n}년 백테스트 결과` : `향후 ${r.n}년 예측 결과`}
+          {mode === "back" ? `최근 ${r.n}년 백테스트 결과` : `향후 ${r.n}년 시뮬레이션 결과`}
         </div>
         <div className={s.verdictText} style={{ color: verdictColor }}>
           {verdict}
@@ -351,7 +351,7 @@ export default function Simulator() {
           strokeLinejoin="round"
         />
 
-        {crossover !== null && (
+        {mode === "back" && crossover !== null && (
           <g>
             <line
               x1={px(crossover)}
@@ -391,48 +391,58 @@ export default function Simulator() {
           </text>
         ))}
 
-        {hover !== null && (
-          <g>
-            <line
-              x1={px(hover)}
-              y1={PAD.t}
-              x2={px(hover)}
-              y2={PAD.t + PLOT_H}
-              stroke="var(--border-strong)"
-              strokeWidth={1}
-            />
-            <circle cx={px(hover)} cy={py(r.dbArr[hover])} r={3.5} fill="var(--neutral)" />
-            <circle cx={px(hover)} cy={py(r.dcArr[hover])} r={4} fill="var(--accent)" />
-            <g>
-              <rect
-                x={Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138)}
-                y={PAD.t + 4}
-                width={138}
-                height={64}
-                rx={8}
-                fill="var(--bg-surface)"
-                stroke="var(--border-strong)"
-                strokeWidth={0.5}
-              />
-              {(() => {
-                const tx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138) + 12;
-                return (
-                  <>
-                    <text x={tx} y={PAD.t + 22} fontSize={11} fill="var(--text-secondary)">
-                      {yearLabel(hover)}
-                    </text>
-                    <text x={tx} y={PAD.t + 40} fontSize={11.5} fill="var(--neutral)">
-                      DB {formatMan(r.dbArr[hover])}
-                    </text>
-                    <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
-                      DC {formatMan(r.dcArr[hover])}
-                    </text>
-                  </>
-                );
-              })()}
-            </g>
-          </g>
-        )}
+        {hover !== null &&
+          (() => {
+            const bx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138);
+            const tx = bx + 12;
+            // 백테스트 모드에서 해당 연도(hover) DC 포트폴리오 수익률 (0이면 시작점 → 없음)
+            const dcRet = mode === "back" && hover >= 1 ? r.rets[hover - 1] : null;
+            const boxH = dcRet !== null ? 82 : 64;
+            return (
+              <g>
+                <line
+                  x1={px(hover)}
+                  y1={PAD.t}
+                  x2={px(hover)}
+                  y2={PAD.t + PLOT_H}
+                  stroke="var(--border-strong)"
+                  strokeWidth={1}
+                />
+                <circle cx={px(hover)} cy={py(r.dbArr[hover])} r={3.5} fill="var(--neutral)" />
+                <circle cx={px(hover)} cy={py(r.dcArr[hover])} r={4} fill="var(--accent)" />
+                <rect
+                  x={bx}
+                  y={PAD.t + 4}
+                  width={138}
+                  height={boxH}
+                  rx={8}
+                  fill="var(--bg-surface)"
+                  stroke="var(--border-strong)"
+                  strokeWidth={0.5}
+                />
+                <text x={tx} y={PAD.t + 22} fontSize={11} fill="var(--text-secondary)">
+                  {yearLabel(hover)}
+                </text>
+                <text x={tx} y={PAD.t + 40} fontSize={11.5} fill="var(--neutral)">
+                  DB {formatMan(r.dbArr[hover])}
+                </text>
+                <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
+                  DC {formatMan(r.dcArr[hover])}
+                </text>
+                {dcRet !== null && (
+                  <text
+                    x={tx}
+                    y={PAD.t + 76}
+                    fontSize={11}
+                    fill={dcRet >= 0 ? "var(--accent-text)" : "var(--danger)"}
+                  >
+                    DC 수익률 {dcRet >= 0 ? "+" : ""}
+                    {(dcRet * 100).toFixed(1)}%
+                  </text>
+                )}
+              </g>
+            );
+          })()}
       </svg>
 
       <div className={s.grid2}>
@@ -455,42 +465,6 @@ export default function Simulator() {
         일시금 대신 <b>IRP로 연금수령</b>하면 퇴직소득세의 30%가 감면됩니다 (10년 이내
         수령 가정). DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
       </div>
-
-      <div className={s.accuracy}>
-        <div className={s.accuracyTitle}>
-          정확도 안내 — 참고용 추정치입니다
-        </div>
-        <ul>
-          <li>
-            지수 수익률은 각 지수의 <b>연간 등락률(가격수익률·현지통화 기준)</b>입니다.
-            출처: KRX·지수 공시.
-          </li>
-          <li>
-            해외 지수는 <b>USD 기준</b>이라 원화로 환산(환율)하면 결과가 달라집니다 — 현재
-            환율 미반영.
-          </li>
-          <li>매년 30/70 리밸런싱, 운용보수·거래비용은 미반영 가정입니다.</li>
-          <li>
-            세금은 현행 퇴직소득세 산식 기반 <b>추정</b>입니다. DC 회사부담금과 그
-            운용수익 전액을 퇴직소득으로 과세(현행과 일치)했으나, 개인 추가납입(IRP
-            세액공제분)은 미반영입니다.
-          </li>
-          <li>
-            IRP 절세는 연금 실제수령 <b>10년 이내(30% 감면)</b> 가정이며, 11년 이상은
-            40% 감면입니다.
-          </li>
-          <li>
-            DB는 <b>퇴직 직전 평균임금</b> 기준이라 임금피크·강등에 취약합니다(옵션으로
-            가정 가능).
-          </li>
-          <li>미래 예측은 과거 평균 수익률을 그대로 가정한 단순 투영입니다.</li>
-        </ul>
-      </div>
-
-      <p className={s.disclaimer}>
-        과거 수익률은 미래 수익을 보장하지 않습니다. 본 시뮬레이션은 정보 제공용이며
-        투자 권유·자문이 아닙니다.
-      </p>
     </div>
   );
 }

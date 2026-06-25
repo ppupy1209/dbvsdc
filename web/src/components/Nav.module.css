@@ -35,34 +35,3 @@
 .dc {
   color: var(--accent-text);
 }
-.links {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  font-size: 13.5px;
-  color: var(--text-secondary);
-}
-.links a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: color 0.12s;
-}
-.links a:hover {
-  color: var(--text);
-}
-.beta {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  border: 0.5px solid var(--border-strong);
-  padding: 3px 9px;
-  border-radius: 999px;
-}
-
-@media (max-width: 520px) {
-  .links {
-    gap: 16px;
-  }
-  .beta {
-    display: none;
-  }
-}

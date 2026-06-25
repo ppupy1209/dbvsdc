@@ -2,7 +2,7 @@
 // 모델 설명: docs/ARCHITECTURE.md "시뮬레이션 계산 모델"
 // ⚠️ 임시 모델 — 법정 산식 정밀화 전. 금액 단위는 모두 "만원".
 
-import { IndexKey, MarketData } from "./indexData";
+import { DIVIDEND_YIELD, IndexKey, MarketData } from "./indexData";
 
 export type Mode = "back" | "fwd";
 
@@ -26,6 +26,7 @@ export interface SimResult {
   dcFinal: number;
   cagr: number; // 혼합 포트폴리오 연평균 수익률
   worst: number; // 최악의 해 수익률
+  rets: number[]; // 길이 n, 연도별 혼합 포트폴리오 수익률 (소수, 예: 0.082)
   calendarStart: number | null; // 백테스트 시작 연도 (back 모드)
   // 세금 (퇴직소득세, 만원)
   dbLumpTax: number;
@@ -34,11 +35,12 @@ export interface SimResult {
   dcIrpTax: number;
 }
 
-// 특정 지수의 전체 기간 연평균 수익률(CAGR)
+// 특정 지수의 전체 기간 연평균 수익률(CAGR). 배당 재투자 포함(총수익) 기준.
 export function cagrOf(k: IndexKey, data: MarketData): number {
   const r = data.returns[k];
+  const div = DIVIDEND_YIELD[k] ?? 0;
   let p = 1;
-  for (const v of r) p *= 1 + v / 100;
+  for (const v of r) p *= 1 + (v + div) / 100;
   return Math.pow(p, 1 / r.length) - 1;
 }
 
@@ -96,8 +98,14 @@ export function simulate(
     calendarStart = data.years[start];
     for (let k = 0; k < n; k++) {
       const yi = start + k;
+      // 가격 등락률 + 평균 배당수익률 = 총수익률(배당 재투자 포함) 근사
       const idx = indices.length
-        ? indices.reduce((a, kk) => a + data.returns[kk][yi], 0) / indices.length / 100
+        ? indices.reduce(
+            (a, kk) => a + data.returns[kk][yi] + (DIVIDEND_YIELD[kk] ?? 0),
+            0
+          ) /
+          indices.length /
+          100
         : dep;
       rets.push(0.3 * dep + 0.7 * idx);
     }
@@ -145,6 +153,7 @@ export function simulate(
     dcFinal,
     cagr,
     worst,
+    rets,
     calendarStart,
     dbLumpTax,
     dcLumpTax,

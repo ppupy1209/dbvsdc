@@ -28,6 +28,18 @@ export const RETURNS: Record<IndexKey, number[]> = {
   kq: [0, -28, -43, 89, 241, -79, 37, -39, 1, -16, 84, -13, 16, -52.8, 54.7, 0.6, -1.5, 0.9, 0.7, 8.6, 25.7, -7.5, 26.4, -15.4, -0.9, 44.6, 6.8, -34.3, 27.6, -21.7, 36.5],
 };
 
+// 지수별 평균 배당수익률(%·연 고정 가정). 위 가격 등락률에 더해
+// "배당 재투자 포함(총수익률)"을 근사한다. → totalReturn ≈ priceReturn + dividendYield
+// ⚠️ 실제 배당은 해마다 다르므로 근사치 — 각 지수의 장기 평균 배당수익률 기준.
+//    (성장주 중심 NQ·KQ는 낮고, 가치주 비중 높은 DJ·SP·KS는 상대적으로 높음)
+export const DIVIDEND_YIELD: Record<IndexKey, number> = {
+  sp: 1.8,
+  nq: 0.8,
+  dj: 2.1,
+  ks: 1.8,
+  kq: 0.6,
+};
+
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
 
 // 지수 설명 + 주요 구성 기업 (선택 시 표시)
@@ -37,8 +49,8 @@ export interface IndexMeta {
 }
 export const INDEX_META: Record<IndexKey, IndexMeta> = {
   sp: {
-    desc: "미국 대형주 500개로 구성된 미국 대표 지수. 시가총액 가중 방식으로 미국 경제 전반을 폭넓게 반영합니다.",
-    companies: ["애플", "마이크로소프트", "엔비디아", "아마존", "알파벳"],
+    desc: "미국 대형주 500개로 구성된 미국 대표 지수. 전 업종을 폭넓게 반영합니다.",
+    companies: ["애플", "엔비디아", "JP모건", "엑손모빌", "비자", "월마트"],
   },
   nq: {
     desc: "나스닥 상장 비금융 대형주 100개로 구성. 기술주 비중이 높아 성장성이 크지만 변동성도 큰 편입니다.",
