@@ -137,10 +137,6 @@ export default function Simulator() {
   return (
     <div className={s.wrap} id="simulator">
       <div className={s.toolHead}>
-        <div className={s.kicker}>
-          <span className={s.kdot} aria-hidden="true" />
-          시뮬레이터
-        </div>
         <h2 className={s.toolTitle}>내 조건으로 직접 비교</h2>
         <p className={s.toolSub}>
           안전자산 30% + 위험자산 70%(DC 법정 한도)로, 과거 수익률을 되짚거나 미래를
