@@ -1,0 +1,52 @@
+name: Deploy (GHCR)
+
+# main 머지 시 Docker 이미지를 GHCR에 빌드·푸시.
+#   ghcr.io/ppupy1209/dbvsdc-api:latest|<sha>
+#   ghcr.io/ppupy1209/dbvsdc-web:latest|<sha>
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  api-image:
+    name: API 이미지 빌드·푸시(GHCR)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: api
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dbvsdc-api:latest
+            ghcr.io/${{ github.repository_owner }}/dbvsdc-api:${{ github.sha }}
+
+  web-image:
+    name: WEB 이미지 빌드·푸시(GHCR)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: true
+          # NEXT_PUBLIC_API_BASE 는 빌드 시 번들에 박힘. 운영 백엔드 주소가 정해지면
+          # build-args 로 주입(예: https://api.도메인). 비우면 Next 내장 목 라우트 사용.
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dbvsdc-web:latest
+            ghcr.io/${{ github.repository_owner }}/dbvsdc-web:${{ github.sha }}
