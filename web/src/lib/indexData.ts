@@ -1,17 +1,16 @@
 // Annual index returns for the risky 70% sleeve, in each index's local currency.
-// RETURNS are gross total return approximations before ETF/account costs.
+// RETURNS are gross total return approximations.
 // S&P 500 uses measured annual TR; other indices add fixed average dividend yields.
-// FX, ETF total expense, tracking difference, trading cost, and hedge cost are not in this file.
-// calc.ts applies conservative implementation-cost haircuts.
+// FX, ETF total expense, tracking difference, trading cost, and hedge cost are not modeled here.
 
 export type IndexKey = "sp" | "nq" | "dj" | "ks" | "kq";
 
 export const INDEX_LABELS: Record<IndexKey, string> = {
   sp: "S&P 500",
-  nq: "나스닥100",
-  dj: "다우존스 30",
-  ks: "코스피200",
-  kq: "코스닥150",
+  nq: "NASDAQ 100",
+  dj: "Dow Jones 30",
+  ks: "KOSPI 200",
+  kq: "KOSDAQ 150",
 };
 
 export const YEARS: number[] = [
@@ -29,7 +28,7 @@ export const RETURN_YEARS: Record<IndexKey, number[]> = {
 };
 
 // Unit: percent. Arrays align with RETURN_YEARS for each index key.
-// All arrays are total-return approximations before additional DC implementation costs.
+// All arrays are total-return approximations.
 export const RETURNS: Record<IndexKey, number[]> = {
   // S&P 500 annual total return, dividend reinvested.
   sp: [37.58, 22.96, 33.36, 28.58, 21.04, -9.1, -11.89, -22.1, 28.68, 10.88, 4.91, 15.79, 5.49, -37.0, 26.46, 15.06, 2.11, 16.0, 32.39, 13.69, 1.38, 11.96, 21.83, -4.38, 31.49, 18.4, 28.71, -18.11, 26.29, 25.02, 17.88],
@@ -92,7 +91,7 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
     companies: ["애플", "엔비디아", "JP모건", "엑손모빌", "비자", "월마트"],
   },
   nq: {
-    desc: "나스닥 상장 비금융 대형주 100개로 구성. 기술주 비중이 높아 성장성이 크지만 변동성도 큰 편입니다.",
+    desc: "NASDAQ 상장 비금융 대형주 100개로 구성. 기술주 비중이 높아 성장성이 크지만 변동성도 큰 편입니다.",
     companies: ["애플", "마이크로소프트", "엔비디아", "아마존", "메타"],
   },
   dj: {
@@ -104,7 +103,7 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
     companies: ["삼성전자", "SK하이닉스", "LG에너지솔루션", "삼성바이오로직스", "현대차"],
   },
   kq: {
-    desc: "코스닥 대표 종목 150개를 담는 성장주 중심 지수. 현재 데이터는 KODEX 코스닥150 ETF 조정종가 프록시입니다.",
+    desc: "KOSDAQ 대표 종목 150개를 담는 성장주 중심 지수. 현재 데이터는 KODEX KOSDAQ150 ETF 조정종가 프록시입니다.",
     companies: ["에코프로비엠", "알테오젠", "에코프로", "HLB", "엔켐"],
   },
 };

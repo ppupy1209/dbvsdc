@@ -1,5 +1,5 @@
 // DB/DC retirement pension simulation model.
-// Amount unit is man-won. Market returns are gross total-return approximations before costs.
+// Amount unit is man-won. Market returns are gross total-return approximations.
 
 import { availableReturnYears, IndexKey, MarketData, yearsForIndex } from "./indexData";
 
@@ -7,9 +7,6 @@ export type Mode = "back" | "fwd";
 export type FutureScenario = "average" | "worst";
 
 export const DEPOSIT_RATE = 0.03;
-export const SAFE_ASSET_COST = 0.001;
-export const RISK_ASSET_COST = 0.007;
-export const DC_ACCOUNT_FEE_RATE = 0;
 export const IRP_PAYOUT_YEARS = 15;
 export const PEAK_CUT = 0.3;
 export const RETIRE_LOCAL_TAX_RATE = 0.1;
@@ -92,9 +89,7 @@ function annualContribution(salaryMan: number, raise: number, yearIndex: number)
 }
 
 function netBlendReturn(indexGrossReturn: number, dep: number): number {
-  const safeNet = Math.max(dep - SAFE_ASSET_COST, 0);
-  const riskyNet = indexGrossReturn - RISK_ASSET_COST;
-  return 0.3 * safeNet + 0.7 * riskyNet - DC_ACCOUNT_FEE_RATE;
+  return 0.3 * dep + 0.7 * indexGrossReturn;
 }
 
 function returnForYear(data: MarketData, key: IndexKey, year: number): number | null {

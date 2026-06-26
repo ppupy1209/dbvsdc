@@ -11,7 +11,7 @@ import {
   availableReturnYears,
   yearsForIndex,
 } from "@/lib/indexData";
-import { cagrOf, formatMan, FutureScenario, Mode, RISK_ASSET_COST, SAFE_ASSET_COST, simulate } from "@/lib/calc";
+import { cagrOf, formatMan, FutureScenario, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -259,8 +259,7 @@ export default function Simulator() {
           <span className={s.rowVal}>{raise.toFixed(1)}%</span>
         </div>
         <div className={s.note}>
-          안전자산 30%: 비용 차감 전 연 <b>{(market.depositRate * 100).toFixed(1)}%</b>
-          - 보수적 비용 차감: 안전자산 {(SAFE_ASSET_COST * 100).toFixed(1)}%p, 위험자산 {(RISK_ASSET_COST * 100).toFixed(1)}%p
+          안전자산 30%: 연 <b>{(market.depositRate * 100).toFixed(1)}%</b> · 위험자산 70%: 선택 지수 수익률
         </div>
       </div>
 

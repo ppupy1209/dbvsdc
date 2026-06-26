@@ -67,7 +67,7 @@ Spring REST API → JSON → Next.js
 - 안전자산 30%(예금 3.0%) + 위험자산 70%(지수 바스켓). **70%는 DC 법정 위험자산 한도**.
 - 매년 부담금 = 월 임금(연 임금총액의 1/12). 매년 30/70 리밸런싱 가정.
 - 잔액 점화식(보수적 연말 납입): `bal = bal × (1 + 혼합수익률) + 부담금`
-- 혼합수익률 = 0.3 × (예금금리 − 안전자산 비용) + 0.7 × (선택 지수 총수익률 − 위험자산 비용). 현재 안전자산 0.10%p, 위험자산 0.70%p 보수적 비용 차감.
+- Blended return = `0.3 * depositRate + 0.7 * selectedIndexReturn`. The old global cost haircuts were removed.
 
 ### 두 가지 모드
 1. **과거 백테스트**: 최근 N년의 *실제 연도별* 지수 수익률을 그대로 적용 → 하락장(2008·2022) 변동까지 표시. 연평균 수익률(CAGR)·최악의 해 함께 제공.
@@ -85,7 +85,7 @@ Spring REST API → JSON → Next.js
 ### 정확도 한계 (사용자에게 고지 — UI 반영 완료)
 - 지수 수익률은 예시값 → 실데이터는 추종 ETF로 대체
 - 해외 지수 **환율(원/달러)** 미반영
-- 환율 미반영. 운용보수·거래비용은 현재 보수적 상수로 차감하며, 실제 상품별 비용 데이터는 미연동.
+- FX, management fees, trading costs, tracking difference, and hedge costs are not currently modeled; add them later as explicit product/FX variables.
 - 세금은 추정치, 개인별 조건 따라 상이
 - 미래 예측은 평균(CAGR) 시나리오와 과거 최악 동일기간 시나리오를 제공하지만, 둘 다 미래 보장은 아님
 
