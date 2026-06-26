@@ -4,6 +4,7 @@
 import { IndexKey, MarketData } from "./indexData";
 
 export type Mode = "back" | "fwd";
+export type FutureScenario = "average" | "worst";
 
 export const DEPOSIT_RATE = 0.03;
 export const SAFE_ASSET_COST = 0.001;
@@ -15,6 +16,7 @@ export const RETIRE_LOCAL_TAX_RATE = 0.1;
 
 export interface SimOptions {
   wagePeak?: boolean;
+  futureScenario?: FutureScenario;
 }
 
 export interface SimResult {
@@ -34,6 +36,7 @@ export interface SimResult {
   dbIrpTax: number;
   dcIrpTax: number;
   irpPayoutYears: number;
+  futureScenario: FutureScenario;
 }
 
 export function cagrOf(k: IndexKey, data: MarketData): number {
@@ -121,6 +124,19 @@ function terminalDcBalance(salaryMan: number, raise: number, rets: number[]): nu
   return bal;
 }
 
+
+function averageForwardReturns(
+  n: number,
+  indices: IndexKey[],
+  data: MarketData,
+  dep: number
+): number[] {
+  const indexReturn = indices.length
+    ? indices.reduce((sum, key) => sum + cagrOf(key, data), 0) / indices.length
+    : dep;
+  return Array.from({ length: n }, () => netBlendReturn(indexReturn, dep));
+}
+
 function conservativeForwardReturns(
   salaryMan: number,
   raise: number,
@@ -174,6 +190,7 @@ export function simulate(
   let calendarStart: number | null = null;
   let scenarioStart: number | null = null;
   let scenarioEnd: number | null = null;
+  const futureScenario = opts.futureScenario ?? "worst";
   let n = yearsInput;
 
   if (mode === "back") {
@@ -184,10 +201,14 @@ export function simulate(
     rets = historicalNetReturns(data, indices, dep, start, n);
   } else {
     n = Math.min(yearsInput, data.years.length);
-    const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
-    rets = scenario.rets;
-    scenarioStart = scenario.scenarioStart;
-    scenarioEnd = scenario.scenarioEnd;
+    if (futureScenario === "average") {
+      rets = averageForwardReturns(n, indices, data, dep);
+    } else {
+      const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
+      rets = scenario.rets;
+      scenarioStart = scenario.scenarioStart;
+      scenarioEnd = scenario.scenarioEnd;
+    }
   }
 
   let bal = 0;
@@ -233,6 +254,7 @@ export function simulate(
     dbIrpTax: irpRetirementTax(dbLumpTax),
     dcIrpTax: irpRetirementTax(dcLumpTax),
     irpPayoutYears: IRP_PAYOUT_YEARS,
+    futureScenario,
   };
 }
 

@@ -8,7 +8,7 @@
 - 인프라: 로컬 `docker compose up --build`(mysql+api+web), 운영 `docker-compose.prod.yml`(GHCR pull, RDS 미사용),
   CI(gradle+npm)·CD(main→GHCR), Maven→Gradle, NCP→AWS ([ADR 0002](DECISIONS/0002-infra-aws-docker.md)).
 - UI/로직(2026-06-26): 다크/라이트 토글, **수익률을 배당 재투자 포함(총수익)으로 전환**,
-  미래 모드 역전표시·임금피크 옵션 제거, 호버 시 연도별 DC 수익률, 지수별 연평균 수익률 표시,
+  미래 모드 평균/최악 시나리오 선택·역전표시·임금피크 옵션 제거, 호버 시 연도별 DC 수익률, 지수별 연평균 수익률 표시,
   '미래 예측'→'미래 시뮬레이션', 면책·정확도 → 푸터 '유의사항' 통합. (상세 DEVLOG 2026-06-26)
 - ⚠️ **배당은 지수별 평균 배당수익률을 수익률 배열에 반영한 총수익률 근사** — 추후 실제 TR/ETF 데이터로 교체 필요.
 

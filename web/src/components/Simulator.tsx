@@ -9,7 +9,7 @@ import {
   IndexKey,
   SAMPLE_MARKET,
 } from "@/lib/indexData";
-import { cagrOf, formatMan, Mode, RISK_ASSET_COST, SAFE_ASSET_COST, simulate } from "@/lib/calc";
+import { cagrOf, formatMan, FutureScenario, Mode, RISK_ASSET_COST, SAFE_ASSET_COST, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -22,6 +22,7 @@ const PLOT_H = H - PAD.t - PAD.b;
 
 export default function Simulator() {
   const [mode, setMode] = useState<Mode>("back");
+  const [futureScenario, setFutureScenario] = useState<FutureScenario>("worst");
   // 지수는 하나만 선택 (중복 선택 불가). calc는 배열을 받으므로 단일 원소 배열로 유지.
   const [indices, setIndices] = useState<IndexKey[]>(["sp"]);
   const [period, setPeriod] = useState(15);
@@ -47,8 +48,8 @@ export default function Simulator() {
   }, []);
 
   const r = useMemo(
-    () => simulate(salary, raise, period, indices, mode, market),
-    [salary, raise, period, indices, mode, market]
+    () => simulate(salary, raise, period, indices, mode, market, { futureScenario }),
+    [salary, raise, period, indices, mode, market, futureScenario]
   );
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
@@ -224,6 +225,32 @@ export default function Simulator() {
           />
           <span className={s.rowVal}>{period}년</span>
         </div>
+        {mode === "fwd" && (
+          <div className={s.scenarioRow}>
+            <span className={s.rowLabel}>미래 시나리오</span>
+            <div className={s.scenarioToggle} role="radiogroup" aria-label="미래 시나리오">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={futureScenario === "average"}
+                className={`${s.scenarioBtn} ${futureScenario === "average" ? s.scenarioBtnOn : ""}`}
+                onClick={() => setFutureScenario("average")}
+              >
+                평균
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={futureScenario === "worst"}
+                className={`${s.scenarioBtn} ${futureScenario === "worst" ? s.scenarioBtnOn : ""}`}
+                onClick={() => setFutureScenario("worst")}
+              >
+                최악
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={s.row}>
           <label className={s.rowLabel}>현재 연봉</label>
           <input
@@ -275,13 +302,15 @@ export default function Simulator() {
             </>
           ) : (
             <>
-              보수 경로 연평균 수익률{" "}
+              {futureScenario === "average" ? "평균 시나리오 연평균 수익률" : "최악 시나리오 연평균 수익률"}{" "}
               <span className={`${s.hl} ${s.cAccent}`}>
                 {(r.cagr * 100).toFixed(1)}%
               </span>{" "}
-              {r.scenarioStart && r.scenarioEnd
-                ? `(과거 최악 ${r.n}년 경로: ${r.scenarioStart}~${r.scenarioEnd})`
-                : "(안전자산만 선택)"}
+              {futureScenario === "average"
+                ? "(선택 지수 과거 CAGR 적용)"
+                : r.scenarioStart && r.scenarioEnd
+                  ? `(과거 최악 ${r.n}년 경로: ${r.scenarioStart}~${r.scenarioEnd})`
+                  : "(안전자산만 선택)"}
             </>
           )}
         </div>
@@ -291,7 +320,9 @@ export default function Simulator() {
         <div className={s.cardLabel} style={{ marginBottom: 0 }}>
           {mode === "back"
             ? "연도별 적립금 추이 (실제 수익률 반영)"
-            : "보수적 과거 스트레스 경로"}
+            : futureScenario === "average"
+              ? "연도별 적립금 추이 (평균 시나리오)"
+              : "연도별 적립금 추이 (최악 시나리오)"}
         </div>
         <div className={s.legend}>
           <span className={s.cSecondary}>

@@ -33,7 +33,7 @@ export default function Footer() {
             DB는 <b>퇴직 직전 평균임금</b> 기준이라 임금피크·강등 등 말년 급여 삭감에
             취약합니다.
           </li>
-          <li>미래 시뮬레이션은 매끈한 평균수익률 대신 과거 최악 동일기간 경로를 적용합니다.</li>
+          <li>미래 시뮬레이션은 평균(CAGR) 시나리오와 과거 최악 동일기간 시나리오를 나누어 표시합니다.</li>
         </ul>
       </div>
       <div className={s.copy}>© 2026 dbvsdc</div>
