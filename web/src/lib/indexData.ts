@@ -9,9 +9,9 @@ export type IndexKey = "sp" | "nq" | "dj" | "ks" | "kq";
 export const INDEX_LABELS: Record<IndexKey, string> = {
   sp: "S&P 500",
   nq: "나스닥100",
-  dj: "다우존스",
-  ks: "코스피",
-  kq: "코스닥",
+  dj: "다우존스 30",
+  ks: "코스피 종합",
+  kq: "코스닥 종합",
 };
 
 export const YEARS: number[] = [
@@ -73,11 +73,11 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
     companies: ["골드만삭스", "마이크로소프트", "캐터필러", "유나이티드헬스", "애플"],
   },
   ks: {
-    desc: "한국거래소 유가증권시장 전체를 대표하는 지수. 한국 경제와 대형 제조·IT 기업을 반영합니다.",
+    desc: "한국거래소 유가증권시장 전체를 대표하는 종합지수. 구성 종목 수는 시장 편입·상장폐지에 따라 변동됩니다.",
     companies: ["삼성전자", "SK하이닉스", "LG에너지솔루션", "삼성바이오로직스", "현대차"],
   },
   kq: {
-    desc: "기술·성장 중소형주 중심의 한국 시장 지수. 바이오·2차전지 비중이 높고 변동성이 큽니다.",
+    desc: "기술·성장 중소형주 중심의 코스닥 종합지수. 구성 종목 수는 시장 편입·상장폐지에 따라 변동됩니다.",
     companies: ["에코프로비엠", "알테오젠", "에코프로", "HLB", "엔켐"],
   },
 };
