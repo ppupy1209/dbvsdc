@@ -10,8 +10,11 @@ export default function ThemeToggle() {
 
   // 초기값: 레이아웃의 인라인 스크립트가 이미 html[data-theme]를 세팅함 → 그걸 읽어 동기화
   useEffect(() => {
-    const current = (document.documentElement.dataset.theme as Theme) || "light";
-    setTheme(current);
+    const raf = requestAnimationFrame(() => {
+      const current = (document.documentElement.dataset.theme as Theme) || "light";
+      setTheme(current);
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   const toggle = () => {

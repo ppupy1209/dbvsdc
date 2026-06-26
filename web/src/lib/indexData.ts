@@ -1,12 +1,8 @@
-// 위험자산 70%에 담는 인기 지수의 연간 수익률(%, 현지통화 기준).
-// 최종 수익률 = RETURNS + DIVIDEND_YIELD = "배당 재투자 포함(총수익)".
-// 지수별 데이터 종류·출처:
-//   - S&P500    : 연간 총수익(TR) 실측 → 배당 0(이미 포함). 출처 slickcharts.com/sp500/returns
-//   - 나스닥100 : 연간 가격수익률 실측 + 평균배당 가산. 출처 slickcharts.com/nasdaq100/returns
-//   - 다우존스  : 연간 가격수익률 실측 + 평균배당 가산. 출처 slickcharts.com/dowjones/returns
-//   - 코스피/코스닥 : 연간 가격수익률 + 평균배당 가정(임시) — KRX 실데이터 적용 예정
-// ⚠️ 해외 지수는 USD 기준이라 원화 환산(환율) 시 결과가 달라집니다 — 환율 미반영.
-//    자세한 내용: docs/DATA-SOURCES.md
+// Annual index returns for the risky 70% sleeve, in each index's local currency.
+// RETURNS are gross total return approximations before ETF/account costs.
+// S&P 500 uses measured annual TR; other indices add fixed average dividend yields.
+// FX, ETF total expense, tracking difference, trading cost, and hedge cost are not in this file.
+// calc.ts applies conservative implementation-cost haircuts.
 
 export type IndexKey = "sp" | "nq" | "dj" | "ks" | "kq";
 
@@ -24,23 +20,20 @@ export const YEARS: number[] = [
   2021, 2022, 2023, 2024, 2025,
 ];
 
-// 각 배열은 YEARS와 같은 길이(31, 1995~2025). 단위: %.
-// sp=총수익(TR), nq·dj·ks·kq=가격수익률(배당은 DIVIDEND_YIELD에서 가산).
+// Arrays have the same length as YEARS. Unit: percent.
+// All arrays are gross total return approximations before costs.
 export const RETURNS: Record<IndexKey, number[]> = {
   // S&P500 연간 총수익(TR, 배당 재투자 포함) — slickcharts
   sp: [37.58, 22.96, 33.36, 28.58, 21.04, -9.1, -11.89, -22.1, 28.68, 10.88, 4.91, 15.79, 5.49, -37.0, 26.46, 15.06, 2.11, 16.0, 32.39, 13.69, 1.38, 11.96, 21.83, -4.38, 31.49, 18.4, 28.71, -18.11, 26.29, 25.02, 17.88],
   // 나스닥100 연간 가격수익률 — slickcharts (1995·1996 동일값 42.54 확인 필요)
-  nq: [42.54, 42.54, 20.63, 85.31, 101.95, -36.84, -32.65, -37.58, 49.12, 10.44, 1.49, 6.79, 18.67, -41.89, 53.54, 19.22, 2.7, 16.82, 34.99, 17.94, 8.43, 5.89, 31.52, -1.04, 37.96, 47.58, 26.63, -32.97, 53.81, 24.88, 20.17],
+  nq: [43.34, 43.34, 21.43, 86.11, 102.75, -36.04, -31.85, -36.78, 49.92, 11.24, 2.29, 7.59, 19.47, -41.09, 54.34, 20.02, 3.5, 17.62, 35.79, 18.74, 9.23, 6.69, 32.32, -0.24, 38.76, 48.38, 27.43, -32.17, 54.61, 25.68, 20.97],
   // 다우존스 연간 가격수익률 — slickcharts
-  dj: [33.45, 26.01, 22.64, 16.1, 25.22, -6.17, -7.1, -16.76, 25.32, 3.15, -0.61, 16.29, 6.43, -33.84, 18.82, 11.02, 5.53, 7.26, 26.5, 7.52, -2.23, 13.42, 25.08, -5.63, 22.34, 7.25, 18.73, -8.78, 13.7, 12.88, 12.97],
-  ks: [-14, -26, -42, 49, 83, -51, 37, -10, 29, 10, 54, 4, 32.3, -40.7, 49.7, 21.9, -11, 9.4, 0.7, -4.8, 2.4, 3.3, 21.8, -17.3, 7.7, 30.8, 3.6, -24.9, 18.7, -9.6, 75.6],
-  kq: [0, -28, -43, 89, 241, -79, 37, -39, 1, -16, 84, -13, 16, -52.8, 54.7, 0.6, -1.5, 0.9, 0.7, 8.6, 25.7, -7.5, 26.4, -15.4, -0.9, 44.6, 6.8, -34.3, 27.6, -21.7, 36.5],
+  dj: [35.55, 28.11, 24.74, 18.2, 27.32, -4.07, -5, -14.66, 27.42, 5.25, 1.49, 18.39, 8.53, -31.74, 20.92, 13.12, 7.63, 9.36, 28.6, 9.62, -0.13, 15.52, 27.18, -3.53, 24.44, 9.35, 20.83, -6.68, 15.8, 14.98, 15.07],
+  ks: [-12.2, -24.2, -40.2, 50.8, 84.8, -49.2, 38.8, -8.2, 30.8, 11.8, 55.8, 5.8, 34.1, -38.9, 51.5, 23.7, -9.2, 11.2, 2.5, -3, 4.2, 5.1, 23.6, -15.5, 9.5, 32.6, 5.4, -23.1, 20.5, -7.8, 77.4],
+  kq: [0.6, -27.4, -42.4, 89.6, 241.6, -78.4, 37.6, -38.4, 1.6, -15.4, 84.6, -12.4, 16.6, -52.2, 55.3, 1.2, -0.9, 1.5, 1.3, 9.2, 26.3, -6.9, 27, -14.8, -0.3, 45.2, 7.4, -33.7, 28.2, -21.1, 37.1],
 };
 
-// RETURNS의 가격수익률에 더해 "배당 재투자 포함(총수익)"을 만든다. (%·연 고정)
-//   - sp: RETURNS가 이미 총수익(TR)이라 0.
-//   - nq·dj: 실측 가격수익률 + 평균 배당수익률(장기 평균, 근사).
-//   - ks·kq: 가격수익률 + 평균 배당 가정(임시) — KRX 연도별 실데이터로 교체 예정.
+// Legacy helper for APIs that still return price returns. SAMPLE_MARKET.returns already include these yields.
 export const DIVIDEND_YIELD: Record<IndexKey, number> = {
   sp: 0,
   nq: 0.8,
@@ -50,6 +43,16 @@ export const DIVIDEND_YIELD: Record<IndexKey, number> = {
 };
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
+
+export function addAverageDividendsToPriceReturns(
+  returns: Record<IndexKey, number[]>
+): Record<IndexKey, number[]> {
+  return INDEX_KEYS.reduce((acc, key) => {
+    const dividend = DIVIDEND_YIELD[key] ?? 0;
+    acc[key] = returns[key].map((v) => Number((v + dividend).toFixed(2)));
+    return acc;
+  }, {} as Record<IndexKey, number[]>);
+}
 
 // 지수 설명 + 주요 구성 기업 (선택 시 표시)
 export interface IndexMeta {
@@ -82,8 +85,12 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
 // 시뮬레이터가 소비하는 시장 데이터. 백엔드 API 응답도 이 형태로 맞춘다.
 export interface MarketData {
   years: number[];
-  returns: Record<IndexKey, number[]>; // 각 배열 길이 = years.length, 단위 %
-  depositRate: number; // 안전자산 30% 몫 금리 (예: 0.03)
+  returns: Record<IndexKey, number[]>; // array length = years.length, unit: %
+  depositRate: number; // safe-asset rate for the 30% sleeve, e.g. 0.03
+  returnBasis?: "gross_total_return" | "price_return";
+  currency?: "local";
+  dividendIncluded?: boolean;
+  expenseIncluded?: boolean;
 }
 
 // API 미연동 시 폴백으로 쓰는 예시 데이터.
@@ -91,4 +98,8 @@ export const SAMPLE_MARKET: MarketData = {
   years: YEARS,
   returns: RETURNS,
   depositRate: 0.03,
+  returnBasis: "gross_total_return",
+  currency: "local",
+  dividendIncluded: true,
+  expenseIncluded: false,
 };

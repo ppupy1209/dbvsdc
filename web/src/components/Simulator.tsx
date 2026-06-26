@@ -9,7 +9,7 @@ import {
   IndexKey,
   SAMPLE_MARKET,
 } from "@/lib/indexData";
-import { cagrOf, formatMan, Mode, simulate } from "@/lib/calc";
+import { cagrOf, formatMan, Mode, RISK_ASSET_COST, SAFE_ASSET_COST, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -249,8 +249,8 @@ export default function Simulator() {
           <span className={s.rowVal}>{raise.toFixed(1)}%</span>
         </div>
         <div className={s.note}>
-          안전자산 30%: 연 <b>{(market.depositRate * 100).toFixed(1)}%</b> (2026년
-          원리금보장형 기준)
+          안전자산 30%: 비용 차감 전 연 <b>{(market.depositRate * 100).toFixed(1)}%</b>
+          - 보수적 비용 차감: 안전자산 {(SAFE_ASSET_COST * 100).toFixed(1)}%p, 위험자산 {(RISK_ASSET_COST * 100).toFixed(1)}%p
         </div>
       </div>
 
@@ -275,11 +275,13 @@ export default function Simulator() {
             </>
           ) : (
             <>
-              가정 연평균 수익률{" "}
+              보수 경로 연평균 수익률{" "}
               <span className={`${s.hl} ${s.cAccent}`}>
-                연 {(r.cagr * 100).toFixed(1)}%
+                {(r.cagr * 100).toFixed(1)}%
               </span>{" "}
-              (선택 지수 과거 평균 기반)
+              {r.scenarioStart && r.scenarioEnd
+                ? `(과거 최악 ${r.n}년 경로: ${r.scenarioStart}~${r.scenarioEnd})`
+                : "(안전자산만 선택)"}
             </>
           )}
         </div>
@@ -289,7 +291,7 @@ export default function Simulator() {
         <div className={s.cardLabel} style={{ marginBottom: 0 }}>
           {mode === "back"
             ? "연도별 적립금 추이 (실제 수익률 반영)"
-            : "연도별 적립금 추이 (과거 평균 가정)"}
+            : "보수적 과거 스트레스 경로"}
         </div>
         <div className={s.legend}>
           <span className={s.cSecondary}>
@@ -462,8 +464,8 @@ export default function Simulator() {
         <TaxCard title="DC형" gross={r.dcFinal} lumpTax={r.dcLumpTax} irpTax={r.dcIrpTax} />
       </div>
       <div className={s.irpNote}>
-        일시금 대신 <b>IRP로 연금수령</b>하면 퇴직소득세의 30%가 감면됩니다 (10년 이내
-        수령 가정). DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
+        IRP 연금수령 세금은 <b>{r.irpPayoutYears}년 균등수령</b>을 가정합니다.
+        10년차까지 이연퇴직소득세의 70%, 11년차부터 60%를 반영했습니다. DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
       </div>
     </div>
   );

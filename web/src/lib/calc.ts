@@ -1,50 +1,48 @@
-// DB/DC 퇴직연금 시뮬레이션 계산 모델.
-// 모델 설명: docs/ARCHITECTURE.md "시뮬레이션 계산 모델"
-// ⚠️ 임시 모델 — 법정 산식 정밀화 전. 금액 단위는 모두 "만원".
+// DB/DC retirement pension simulation model.
+// Amount unit is man-won. Market returns are gross total-return approximations before costs.
 
-import { DIVIDEND_YIELD, IndexKey, MarketData } from "./indexData";
+import { IndexKey, MarketData } from "./indexData";
 
 export type Mode = "back" | "fwd";
 
-// 안전자산 30% 몫의 금리 (2026년 원리금보장형 기준 가정)
 export const DEPOSIT_RATE = 0.03;
-// IRP 연금수령 시 퇴직소득세 감면율 (연금 실제수령 10년 이내 가정, 11년 이상은 0.4)
-export const IRP_DISCOUNT = 0.3;
-// 임금피크제 가정 시 퇴직 직전 평균임금 감액률 (DB 산정 기준 하락)
+export const SAFE_ASSET_COST = 0.001;
+export const RISK_ASSET_COST = 0.007;
+export const DC_ACCOUNT_FEE_RATE = 0;
+export const IRP_PAYOUT_YEARS = 15;
 export const PEAK_CUT = 0.3;
+export const RETIRE_LOCAL_TAX_RATE = 0.1;
 
 export interface SimOptions {
-  // 임금피크제 적용 가정: DB는 퇴직 직전 평균임금 기준이라 최종임금이 깎이면 불리
   wagePeak?: boolean;
 }
 
 export interface SimResult {
   n: number;
-  dbArr: number[]; // 길이 n+1, 연도별 누적 (만원)
+  dbArr: number[];
   dcArr: number[];
   dbFinal: number;
   dcFinal: number;
-  cagr: number; // 혼합 포트폴리오 연평균 수익률
-  worst: number; // 최악의 해 수익률
-  rets: number[]; // 길이 n, 연도별 혼합 포트폴리오 수익률 (소수, 예: 0.082)
-  calendarStart: number | null; // 백테스트 시작 연도 (back 모드)
-  // 세금 (퇴직소득세, 만원)
+  cagr: number;
+  worst: number;
+  rets: number[];
+  calendarStart: number | null;
+  scenarioStart: number | null;
+  scenarioEnd: number | null;
   dbLumpTax: number;
   dcLumpTax: number;
   dbIrpTax: number;
   dcIrpTax: number;
+  irpPayoutYears: number;
 }
 
-// 특정 지수의 전체 기간 연평균 수익률(CAGR). 배당 재투자 포함(총수익) 기준.
 export function cagrOf(k: IndexKey, data: MarketData): number {
   const r = data.returns[k];
-  const div = DIVIDEND_YIELD[k] ?? 0;
   let p = 1;
-  for (const v of r) p *= 1 + (v + div) / 100;
+  for (const v of r) p *= 1 + v / 100;
   return Math.pow(p, 1 / r.length) - 1;
 }
 
-// 종합소득세 누진세율 (2026 기준, 과세표준 만원 단위)
 function progTax(base: number): number {
   if (base <= 1400) return base * 0.06;
   if (base <= 5000) return base * 0.15 - 126;
@@ -56,7 +54,6 @@ function progTax(base: number): number {
   return base * 0.45 - 6594;
 }
 
-// 퇴직소득세 추정 (일시금 수령). amount, 결과 단위: 만원
 export function retireTax(amountMan: number, years: number): number {
   let deduct: number;
   if (years <= 5) deduct = 100 * years;
@@ -64,7 +61,7 @@ export function retireTax(amountMan: number, years: number): number {
   else if (years <= 20) deduct = 1500 + 250 * (years - 10);
   else deduct = 4000 + 300 * (years - 20);
 
-  const hwan = (Math.max(amountMan - deduct, 0) / years) * 12; // 환산급여
+  const hwan = (Math.max(amountMan - deduct, 0) / years) * 12;
   let hd: number;
   if (hwan <= 800) hd = hwan;
   else if (hwan <= 7000) hd = 800 + (hwan - 800) * 0.6;
@@ -73,7 +70,93 @@ export function retireTax(amountMan: number, years: number): number {
   else hd = 15170 + (hwan - 30000) * 0.35;
 
   const base = Math.max(hwan - hd, 0);
-  return Math.max((progTax(base) / 12) * years, 0);
+  const nationalTax = Math.max((progTax(base) / 12) * years, 0);
+  return nationalTax * (1 + RETIRE_LOCAL_TAX_RATE);
+}
+
+export function irpRetirementTax(lumpTax: number, payoutYears = IRP_PAYOUT_YEARS): number {
+  if (payoutYears <= 0) return lumpTax;
+  const taxPerYear = lumpTax / payoutYears;
+  let tax = 0;
+  for (let year = 1; year <= payoutYears; year++) {
+    tax += taxPerYear * (year <= 10 ? 0.7 : 0.6);
+  }
+  return tax;
+}
+
+function annualContribution(salaryMan: number, raise: number, yearIndex: number): number {
+  return (salaryMan * Math.pow(1 + raise, yearIndex)) / 12;
+}
+
+function netBlendReturn(indexGrossReturn: number, dep: number): number {
+  const safeNet = Math.max(dep - SAFE_ASSET_COST, 0);
+  const riskyNet = indexGrossReturn - RISK_ASSET_COST;
+  return 0.3 * safeNet + 0.7 * riskyNet - DC_ACCOUNT_FEE_RATE;
+}
+
+function indexGrossReturn(data: MarketData, indices: IndexKey[], yearIndex: number, dep: number): number {
+  if (!indices.length) return dep;
+  return indices.reduce((sum, key) => sum + data.returns[key][yearIndex] / 100, 0) / indices.length;
+}
+
+function historicalNetReturns(
+  data: MarketData,
+  indices: IndexKey[],
+  dep: number,
+  start: number,
+  n: number
+): number[] {
+  const rets: number[] = [];
+  for (let offset = 0; offset < n; offset++) {
+    rets.push(netBlendReturn(indexGrossReturn(data, indices, start + offset, dep), dep));
+  }
+  return rets;
+}
+
+function terminalDcBalance(salaryMan: number, raise: number, rets: number[]): number {
+  let bal = 0;
+  for (let i = 0; i < rets.length; i++) {
+    bal = bal * (1 + rets[i]) + annualContribution(salaryMan, raise, i);
+  }
+  return bal;
+}
+
+function conservativeForwardReturns(
+  salaryMan: number,
+  raise: number,
+  n: number,
+  indices: IndexKey[],
+  data: MarketData,
+  dep: number
+): { rets: number[]; scenarioStart: number | null; scenarioEnd: number | null } {
+  if (!indices.length) {
+    return {
+      rets: Array.from({ length: n }, () => netBlendReturn(dep, dep)),
+      scenarioStart: null,
+      scenarioEnd: null,
+    };
+  }
+
+  const avail = data.years.length;
+  let worstRets = historicalNetReturns(data, indices, dep, Math.max(0, avail - n), n);
+  let worstBalance = terminalDcBalance(salaryMan, raise, worstRets);
+  let worstStart = Math.max(0, avail - n);
+
+  for (let start = 0; start <= avail - n; start++) {
+    const candidate = historicalNetReturns(data, indices, dep, start, n);
+    const balance = terminalDcBalance(salaryMan, raise, candidate);
+    if (balance < worstBalance) {
+      worstBalance = balance;
+      worstRets = candidate;
+      worstStart = start;
+    }
+  }
+
+  return {
+    rets: worstRets,
+    scenarioStart: data.years[worstStart],
+    scenarioEnd: data.years[worstStart + n - 1],
+  };
 }
 
 export function simulate(
@@ -87,8 +170,10 @@ export function simulate(
 ): SimResult {
   const raise = raisePct / 100;
   const dep = data.depositRate;
-  const rets: number[] = [];
+  let rets: number[] = [];
   let calendarStart: number | null = null;
+  let scenarioStart: number | null = null;
+  let scenarioEnd: number | null = null;
   let n = yearsInput;
 
   if (mode === "back") {
@@ -96,25 +181,13 @@ export function simulate(
     n = Math.min(yearsInput, avail);
     const start = avail - n;
     calendarStart = data.years[start];
-    for (let k = 0; k < n; k++) {
-      const yi = start + k;
-      // 가격 등락률 + 평균 배당수익률 = 총수익률(배당 재투자 포함) 근사
-      const idx = indices.length
-        ? indices.reduce(
-            (a, kk) => a + data.returns[kk][yi] + (DIVIDEND_YIELD[kk] ?? 0),
-            0
-          ) /
-          indices.length /
-          100
-        : dep;
-      rets.push(0.3 * dep + 0.7 * idx);
-    }
+    rets = historicalNetReturns(data, indices, dep, start, n);
   } else {
-    const cg = indices.length
-      ? indices.reduce((a, kk) => a + cagrOf(kk, data), 0) / indices.length
-      : dep;
-    const blend = 0.3 * dep + 0.7 * cg;
-    for (let k = 0; k < n; k++) rets.push(blend);
+    n = Math.min(yearsInput, data.years.length);
+    const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
+    rets = scenario.rets;
+    scenarioStart = scenario.scenarioStart;
+    scenarioEnd = scenario.scenarioEnd;
   }
 
   let bal = 0;
@@ -123,20 +196,18 @@ export function simulate(
   let prod = 1;
   let worst = Infinity;
   for (let i = 0; i < n; i++) {
-    const monthly = (salaryMan * Math.pow(1 + raise, i)) / 12;
+    const contribution = annualContribution(salaryMan, raise, i);
     const ret = rets[i];
     prod *= 1 + ret;
     if (ret < worst) worst = ret;
-    bal = (bal + monthly) * (1 + ret);
+    bal = bal * (1 + ret) + contribution;
     dcArr.push(bal);
-    dbArr.push(monthly * (i + 1));
+    dbArr.push(contribution * (i + 1));
   }
 
-  // 임금피크제 가정: DB는 퇴직 직전 평균임금 기준이므로 최종 시점 금액만 감액.
-  // (DC는 이미 적립·운용된 금액이라 영향 없음 — 이것이 DB의 구조적 약점)
   if (opts.wagePeak) {
-    const monthlyFinal = (salaryMan * Math.pow(1 + raise, n - 1)) / 12;
-    dbArr[n] = monthlyFinal * (1 - PEAK_CUT) * n;
+    const finalContribution = annualContribution(salaryMan, raise, n - 1);
+    dbArr[n] = finalContribution * (1 - PEAK_CUT) * n;
   }
 
   const cagr = Math.pow(prod, 1 / n) - 1;
@@ -155,21 +226,23 @@ export function simulate(
     worst,
     rets,
     calendarStart,
+    scenarioStart,
+    scenarioEnd,
     dbLumpTax,
     dcLumpTax,
-    dbIrpTax: dbLumpTax * (1 - IRP_DISCOUNT),
-    dcIrpTax: dcLumpTax * (1 - IRP_DISCOUNT),
+    dbIrpTax: irpRetirementTax(dbLumpTax),
+    dcIrpTax: irpRetirementTax(dcLumpTax),
+    irpPayoutYears: IRP_PAYOUT_YEARS,
   };
 }
 
-// 만원 → "1억 2,340만원" 형태. 음수 지원.
 export function formatMan(man: number): string {
   const neg = man < 0;
   const v = Math.round(Math.abs(man));
   const eok = Math.floor(v / 10000);
   const rest = v % 10000;
   let s: string;
-  if (eok > 0) s = `${eok}억${rest > 0 ? " " + rest.toLocaleString() + "만원" : "원"}`;
-  else s = `${v.toLocaleString()}만원`;
+  if (eok > 0) s = `${eok}\uc5b5${rest > 0 ? " " + rest.toLocaleString() + "\ub9cc\uc6d0" : "\uc6d0"}`;
+  else s = `${v.toLocaleString()}\ub9cc\uc6d0`;
   return (neg ? "-" : "") + s;
 }

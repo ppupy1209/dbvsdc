@@ -11,6 +11,10 @@ export function GET() {
   return NextResponse.json({
     asOf: new Date().toISOString().slice(0, 10),
     source: "sample",
+    returnBasis: SAMPLE_MARKET.returnBasis,
+    currency: SAMPLE_MARKET.currency,
+    dividendIncluded: SAMPLE_MARKET.dividendIncluded,
+    expenseIncluded: SAMPLE_MARKET.expenseIncluded,
     years: SAMPLE_MARKET.years,
     depositRate: SAMPLE_MARKET.depositRate,
     returns: SAMPLE_MARKET.returns,

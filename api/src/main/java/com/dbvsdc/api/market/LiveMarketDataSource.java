@@ -71,6 +71,10 @@ public class LiveMarketDataSource implements MarketDataSource {
         return new MarketDataResponse(
                 LocalDate.now(KST).toString(),
                 "live",
+                "gross_total_return",
+                "local",
+                true,
+                false,
                 depositRate(),
                 years,
                 returns
