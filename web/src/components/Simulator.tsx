@@ -506,6 +506,11 @@ export default function Simulator() {
   );
 }
 
+function taxRateOf(tax: number, gross: number): string {
+  if (gross <= 0) return "0.0%";
+  return `${((tax / gross) * 100).toFixed(1)}%`;
+}
+
 function TaxCard({
   title,
   gross,
@@ -517,11 +522,14 @@ function TaxCard({
   lumpTax: number;
   irpTax: number;
 }) {
+  const lumpTaxRate = taxRateOf(lumpTax, gross);
+  const irpTaxRate = taxRateOf(irpTax, gross);
+
   return (
     <div className={s.taxCard}>
       <div className={s.taxTitle}>{title}</div>
       <div className={s.taxRow}>
-        <span className={s.cSecondary}>일시금 세금</span>
+        <span className={s.cSecondary}>일시금 세금 ({lumpTaxRate})</span>
         <span className={s.cDanger}>{formatMan(-lumpTax)}</span>
       </div>
       <div className={s.taxRow}>
@@ -529,7 +537,7 @@ function TaxCard({
         <span>{formatMan(gross - lumpTax)}</span>
       </div>
       <div className={`${s.taxRow} ${s.taxRowSep}`}>
-        <span className={s.cAccent}>IRP 연금수령 세금</span>
+        <span className={s.cAccent}>IRP 연금수령 세금 ({irpTaxRate})</span>
         <span className={s.cAccent}>{formatMan(-irpTax)}</span>
       </div>
       <div className={s.taxRow} style={{ marginBottom: 0 }}>
