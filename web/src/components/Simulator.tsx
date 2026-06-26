@@ -225,31 +225,6 @@ export default function Simulator() {
           />
           <span className={s.rowVal}>{period}년</span>
         </div>
-        {mode === "fwd" && (
-          <div className={s.scenarioRow}>
-            <span className={s.rowLabel}>미래 시나리오</span>
-            <div className={s.scenarioToggle} role="radiogroup" aria-label="미래 시나리오">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={futureScenario === "average"}
-                className={`${s.scenarioBtn} ${futureScenario === "average" ? s.scenarioBtnOn : ""}`}
-                onClick={() => setFutureScenario("average")}
-              >
-                평균
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={futureScenario === "worst"}
-                className={`${s.scenarioBtn} ${futureScenario === "worst" ? s.scenarioBtnOn : ""}`}
-                onClick={() => setFutureScenario("worst")}
-              >
-                최악
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className={s.row}>
           <label className={s.rowLabel}>현재 연봉</label>
@@ -316,167 +291,196 @@ export default function Simulator() {
         </div>
       </div>
 
-      <div className={s.legendRow}>
-        <div className={s.cardLabel} style={{ marginBottom: 0 }}>
-          {mode === "back"
-            ? "연도별 적립금 추이 (실제 수익률 반영)"
-            : futureScenario === "average"
-              ? "연도별 적립금 추이 (평균 시나리오)"
-              : "연도별 적립금 추이 (최악 시나리오)"}
-        </div>
-        <div className={s.legend}>
-          <span className={s.cSecondary}>
-            <span className={s.swatch} style={{ background: "var(--neutral)" }} />
-            DB
-          </span>
-          <span className={s.cAccent}>
-            <span className={s.swatch} style={{ background: "var(--accent)" }} />
-            DC
-          </span>
-        </div>
-      </div>
-
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className={s.chart}
-        role="img"
-        aria-label="연도별 DB와 DC 적립금 추이"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-      >
-        {yTicks.map((tv, i) => (
-          <g key={`y${i}`}>
-            <line
-              x1={PAD.l}
-              y1={py(tv)}
-              x2={W - PAD.r}
-              y2={py(tv)}
-              stroke="var(--border)"
-              strokeWidth={1}
-              strokeDasharray={i === 0 ? undefined : "2 5"}
-            />
-            <text
-              x={PAD.l - 8}
-              y={py(tv) + 3}
-              fontSize={10.5}
-              fill="var(--text-tertiary)"
-              textAnchor="end"
-            >
-              {i === 0 ? "0" : yfmt(tv)}
-            </text>
-          </g>
-        ))}
-
-        <path d={areaD} fill="var(--accent)" fillOpacity={0.08} />
-        <polyline
-          points={dbPts}
-          fill="none"
-          stroke="var(--neutral)"
-          strokeWidth={2}
-          strokeLinejoin="round"
-        />
-        <polyline
-          points={dcPts}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={2.5}
-          strokeLinejoin="round"
-        />
-
-        {mode === "back" && crossover !== null && (
-          <g>
-            <line
-              x1={px(crossover)}
-              y1={PAD.t}
-              x2={px(crossover)}
-              y2={PAD.t + PLOT_H}
-              stroke="var(--accent)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              opacity={0.5}
-            />
-            <text
-              x={px(crossover) > W - 96 ? px(crossover) - 6 : px(crossover) + 6}
-              y={PAD.t + 12}
-              fontSize={11}
-              fill="var(--accent-text)"
-              textAnchor={px(crossover) > W - 96 ? "end" : "start"}
-            >
-              {(mode === "back" ? yearLabel(crossover) : `${crossover}년차`) + " 역전"}
-            </text>
-          </g>
+      <div className={`${s.chartShell} ${mode === "fwd" ? s.chartShellWithAside : ""}`}>
+        {mode === "fwd" && (
+          <div className={s.scenarioAside}>
+            <span className={s.scenarioLabel}>미래 시나리오</span>
+            <div className={s.scenarioToggle} role="radiogroup" aria-label="미래 시나리오">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={futureScenario === "average"}
+                className={`${s.scenarioBtn} ${futureScenario === "average" ? s.scenarioBtnOn : ""}`}
+                onClick={() => setFutureScenario("average")}
+              >
+                평균
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={futureScenario === "worst"}
+                className={`${s.scenarioBtn} ${futureScenario === "worst" ? s.scenarioBtnOn : ""}`}
+                onClick={() => setFutureScenario("worst")}
+              >
+                최악
+              </button>
+            </div>
+          </div>
         )}
+        <div className={s.chartMain}>
+          <div className={s.legendRow}>
+            <div className={s.cardLabel} style={{ marginBottom: 0 }}>
+              {mode === "back"
+                ? "연도별 적립금 추이 (실제 수익률 반영)"
+                : futureScenario === "average"
+                  ? "연도별 적립금 추이 (평균 시나리오)"
+                  : "연도별 적립금 추이 (최악 시나리오)"}
+            </div>
+            <div className={s.legend}>
+              <span className={s.cSecondary}>
+                <span className={s.swatch} style={{ background: "var(--neutral)" }} />
+                DB
+              </span>
+              <span className={s.cAccent}>
+                <span className={s.swatch} style={{ background: "var(--accent)" }} />
+                DC
+              </span>
+            </div>
+          </div>
 
-        <circle cx={px(r.n)} cy={py(r.dbArr[r.n])} r={3} fill="var(--neutral)" />
-        <circle cx={px(r.n)} cy={py(r.dcArr[r.n])} r={3.5} fill="var(--accent)" />
-
-        {xTickIdx.map((i) => (
-          <text
-            key={`x${i}`}
-            x={px(i)}
-            y={H - 14}
-            fontSize={10.5}
-            fill="var(--text-tertiary)"
-            textAnchor={i === 0 ? "start" : i === r.n ? "end" : "middle"}
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${W} ${H}`}
+            className={s.chart}
+            role="img"
+            aria-label="연도별 DB와 DC 적립금 추이"
+            onMouseMove={onMove}
+            onMouseLeave={() => setHover(null)}
           >
-            {yearLabel(i)}
-          </text>
-        ))}
+            {yTicks.map((tv, i) => (
+              <g key={`y${i}`}>
+                <line
+                  x1={PAD.l}
+                  y1={py(tv)}
+                  x2={W - PAD.r}
+                  y2={py(tv)}
+                  stroke="var(--border)"
+                  strokeWidth={1}
+                  strokeDasharray={i === 0 ? undefined : "2 5"}
+                />
+                <text
+                  x={PAD.l - 8}
+                  y={py(tv) + 3}
+                  fontSize={10.5}
+                  fill="var(--text-tertiary)"
+                  textAnchor="end"
+                >
+                  {i === 0 ? "0" : yfmt(tv)}
+                </text>
+              </g>
+            ))}
 
-        {hover !== null &&
-          (() => {
-            const bx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138);
-            const tx = bx + 12;
-            // 백테스트 모드에서 해당 연도(hover) DC 포트폴리오 수익률 (0이면 시작점 → 없음)
-            const dcRet = mode === "back" && hover >= 1 ? r.rets[hover - 1] : null;
-            const boxH = dcRet !== null ? 82 : 64;
-            return (
+            <path d={areaD} fill="var(--accent)" fillOpacity={0.08} />
+            <polyline
+              points={dbPts}
+              fill="none"
+              stroke="var(--neutral)"
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+            <polyline
+              points={dcPts}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth={2.5}
+              strokeLinejoin="round"
+            />
+
+            {mode === "back" && crossover !== null && (
               <g>
                 <line
-                  x1={px(hover)}
+                  x1={px(crossover)}
                   y1={PAD.t}
-                  x2={px(hover)}
+                  x2={px(crossover)}
                   y2={PAD.t + PLOT_H}
-                  stroke="var(--border-strong)"
+                  stroke="var(--accent)"
                   strokeWidth={1}
+                  strokeDasharray="3 3"
+                  opacity={0.5}
                 />
-                <circle cx={px(hover)} cy={py(r.dbArr[hover])} r={3.5} fill="var(--neutral)" />
-                <circle cx={px(hover)} cy={py(r.dcArr[hover])} r={4} fill="var(--accent)" />
-                <rect
-                  x={bx}
-                  y={PAD.t + 4}
-                  width={138}
-                  height={boxH}
-                  rx={8}
-                  fill="var(--bg-surface)"
-                  stroke="var(--border-strong)"
-                  strokeWidth={0.5}
-                />
-                <text x={tx} y={PAD.t + 22} fontSize={11} fill="var(--text-secondary)">
-                  {yearLabel(hover)}
+                <text
+                  x={px(crossover) > W - 96 ? px(crossover) - 6 : px(crossover) + 6}
+                  y={PAD.t + 12}
+                  fontSize={11}
+                  fill="var(--accent-text)"
+                  textAnchor={px(crossover) > W - 96 ? "end" : "start"}
+                >
+                  {(mode === "back" ? yearLabel(crossover) : `${crossover}년차`) + " 역전"}
                 </text>
-                <text x={tx} y={PAD.t + 40} fontSize={11.5} fill="var(--neutral)">
-                  DB {formatMan(r.dbArr[hover])}
-                </text>
-                <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
-                  DC {formatMan(r.dcArr[hover])}
-                </text>
-                {dcRet !== null && (
-                  <text
-                    x={tx}
-                    y={PAD.t + 76}
-                    fontSize={11}
-                    fill={dcRet >= 0 ? "var(--accent-text)" : "var(--danger)"}
-                  >
-                    DC 수익률 {dcRet >= 0 ? "+" : ""}
-                    {(dcRet * 100).toFixed(1)}%
-                  </text>
-                )}
               </g>
-            );
-          })()}
-      </svg>
+            )}
+
+            <circle cx={px(r.n)} cy={py(r.dbArr[r.n])} r={3} fill="var(--neutral)" />
+            <circle cx={px(r.n)} cy={py(r.dcArr[r.n])} r={3.5} fill="var(--accent)" />
+
+            {xTickIdx.map((i) => (
+              <text
+                key={`x${i}`}
+                x={px(i)}
+                y={H - 14}
+                fontSize={10.5}
+                fill="var(--text-tertiary)"
+                textAnchor={i === 0 ? "start" : i === r.n ? "end" : "middle"}
+              >
+                {yearLabel(i)}
+              </text>
+            ))}
+
+            {hover !== null &&
+              (() => {
+                const bx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138);
+                const tx = bx + 12;
+                // 백테스트 모드에서 해당 연도(hover) DC 포트폴리오 수익률 (0이면 시작점 → 없음)
+                const dcRet = mode === "back" && hover >= 1 ? r.rets[hover - 1] : null;
+                const boxH = dcRet !== null ? 82 : 64;
+                return (
+                  <g>
+                    <line
+                      x1={px(hover)}
+                      y1={PAD.t}
+                      x2={px(hover)}
+                      y2={PAD.t + PLOT_H}
+                      stroke="var(--border-strong)"
+                      strokeWidth={1}
+                    />
+                    <circle cx={px(hover)} cy={py(r.dbArr[hover])} r={3.5} fill="var(--neutral)" />
+                    <circle cx={px(hover)} cy={py(r.dcArr[hover])} r={4} fill="var(--accent)" />
+                    <rect
+                      x={bx}
+                      y={PAD.t + 4}
+                      width={138}
+                      height={boxH}
+                      rx={8}
+                      fill="var(--bg-surface)"
+                      stroke="var(--border-strong)"
+                      strokeWidth={0.5}
+                    />
+                    <text x={tx} y={PAD.t + 22} fontSize={11} fill="var(--text-secondary)">
+                      {yearLabel(hover)}
+                    </text>
+                    <text x={tx} y={PAD.t + 40} fontSize={11.5} fill="var(--neutral)">
+                      DB {formatMan(r.dbArr[hover])}
+                    </text>
+                    <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
+                      DC {formatMan(r.dcArr[hover])}
+                    </text>
+                    {dcRet !== null && (
+                      <text
+                        x={tx}
+                        y={PAD.t + 76}
+                        fontSize={11}
+                        fill={dcRet >= 0 ? "var(--accent-text)" : "var(--danger)"}
+                      >
+                        DC 수익률 {dcRet >= 0 ? "+" : ""}
+                        {(dcRet * 100).toFixed(1)}%
+                      </text>
+                    )}
+                  </g>
+                );
+              })()}
+          </svg>
+        </div>
+      </div>
 
       <div className={s.grid2}>
         <div className={s.metric}>
