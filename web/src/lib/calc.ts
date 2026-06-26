@@ -1,7 +1,7 @@
 // DB/DC retirement pension simulation model.
 // Amount unit is man-won. Market returns are gross total-return approximations before costs.
 
-import { IndexKey, MarketData } from "./indexData";
+import { availableReturnYears, IndexKey, MarketData, yearsForIndex } from "./indexData";
 
 export type Mode = "back" | "fwd";
 export type FutureScenario = "average" | "worst";
@@ -97,23 +97,30 @@ function netBlendReturn(indexGrossReturn: number, dep: number): number {
   return 0.3 * safeNet + 0.7 * riskyNet - DC_ACCOUNT_FEE_RATE;
 }
 
-function indexGrossReturn(data: MarketData, indices: IndexKey[], yearIndex: number, dep: number): number {
+function returnForYear(data: MarketData, key: IndexKey, year: number): number | null {
+  const years = yearsForIndex(data, key);
+  const idx = years.indexOf(year);
+  if (idx < 0) return null;
+  const value = data.returns[key]?.[idx];
+  return typeof value === "number" ? value / 100 : null;
+}
+
+function indexGrossReturn(data: MarketData, indices: IndexKey[], year: number, dep: number): number {
   if (!indices.length) return dep;
-  return indices.reduce((sum, key) => sum + data.returns[key][yearIndex] / 100, 0) / indices.length;
+  const values = indices
+    .map((key) => returnForYear(data, key, year))
+    .filter((value): value is number => value !== null);
+  if (!values.length) return dep;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function historicalNetReturns(
   data: MarketData,
   indices: IndexKey[],
   dep: number,
-  start: number,
-  n: number
+  years: number[]
 ): number[] {
-  const rets: number[] = [];
-  for (let offset = 0; offset < n; offset++) {
-    rets.push(netBlendReturn(indexGrossReturn(data, indices, start + offset, dep), dep));
-  }
-  return rets;
+  return years.map((year) => netBlendReturn(indexGrossReturn(data, indices, year, dep), dep));
 }
 
 function terminalDcBalance(salaryMan: number, raise: number, rets: number[]): number {
@@ -153,25 +160,38 @@ function conservativeForwardReturns(
     };
   }
 
-  const avail = data.years.length;
-  let worstRets = historicalNetReturns(data, indices, dep, Math.max(0, avail - n), n);
-  let worstBalance = terminalDcBalance(salaryMan, raise, worstRets);
-  let worstStart = Math.max(0, avail - n);
+  const years = availableReturnYears(data, indices);
+  const avail = years.length;
+  if (avail === 0) {
+    return {
+      rets: Array.from({ length: n }, () => netBlendReturn(dep, dep)),
+      scenarioStart: null,
+      scenarioEnd: null,
+    };
+  }
 
-  for (let start = 0; start <= avail - n; start++) {
-    const candidate = historicalNetReturns(data, indices, dep, start, n);
+  const windowSize = Math.min(n, avail);
+  let worstStart = Math.max(0, avail - windowSize);
+  let worstYears = years.slice(worstStart, worstStart + windowSize);
+  let worstRets = historicalNetReturns(data, indices, dep, worstYears);
+  let worstBalance = terminalDcBalance(salaryMan, raise, worstRets);
+
+  for (let start = 0; start <= avail - windowSize; start++) {
+    const candidateYears = years.slice(start, start + windowSize);
+    const candidate = historicalNetReturns(data, indices, dep, candidateYears);
     const balance = terminalDcBalance(salaryMan, raise, candidate);
     if (balance < worstBalance) {
       worstBalance = balance;
       worstRets = candidate;
       worstStart = start;
+      worstYears = candidateYears;
     }
   }
 
   return {
     rets: worstRets,
-    scenarioStart: data.years[worstStart],
-    scenarioEnd: data.years[worstStart + n - 1],
+    scenarioStart: worstYears[0] ?? null,
+    scenarioEnd: worstYears[worstYears.length - 1] ?? null,
   };
 }
 
@@ -193,14 +213,17 @@ export function simulate(
   const futureScenario = opts.futureScenario ?? "worst";
   let n = yearsInput;
 
+  const years = availableReturnYears(data, indices);
+
   if (mode === "back") {
-    const avail = data.years.length;
-    n = Math.min(yearsInput, avail);
-    const start = avail - n;
-    calendarStart = data.years[start];
-    rets = historicalNetReturns(data, indices, dep, start, n);
+    n = Math.min(yearsInput, years.length);
+    const selectedYears = years.slice(Math.max(0, years.length - n));
+    calendarStart = selectedYears[0] ?? null;
+    rets = selectedYears.length
+      ? historicalNetReturns(data, indices, dep, selectedYears)
+      : Array.from({ length: n }, () => netBlendReturn(dep, dep));
   } else {
-    n = Math.min(yearsInput, data.years.length);
+    n = Math.min(yearsInput, years.length || yearsInput);
     if (futureScenario === "average") {
       rets = averageForwardReturns(n, indices, data, dep);
     } else {

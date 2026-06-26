@@ -59,13 +59,17 @@ public class LiveMarketDataSource implements MarketDataSource {
         List<Integer> years = new ArrayList<>(yearSet);
         Collections.sort(years);
 
+        Map<String, List<Integer>> returnYears = new LinkedHashMap<>();
         Map<String, List<Double>> returns = new LinkedHashMap<>();
         for (String key : INDEX_KEYS) {
             Map<Integer, Double> valuesByYear = byIndex.get(key);
-            if (!valuesByYear.keySet().containsAll(years)) {
+            if (valuesByYear.isEmpty()) {
                 return SampleMarketDataSource.sampleResponse();
             }
-            returns.put(key, years.stream().map(valuesByYear::get).toList());
+            List<Integer> keyYears = new ArrayList<>(valuesByYear.keySet());
+            Collections.sort(keyYears);
+            returnYears.put(key, keyYears);
+            returns.put(key, keyYears.stream().map(valuesByYear::get).toList());
         }
 
         return new MarketDataResponse(
@@ -77,6 +81,7 @@ public class LiveMarketDataSource implements MarketDataSource {
                 false,
                 depositRate(),
                 years,
+                returnYears,
                 returns
         );
     }

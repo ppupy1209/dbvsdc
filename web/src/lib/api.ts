@@ -25,6 +25,7 @@ export async function fetchMarketData(): Promise<MarketDataResult> {
       data: {
         years: j.years,
         returns: dividendIncluded ? j.returns : addAverageDividendsToPriceReturns(j.returns),
+        returnYears: j.returnYears,
         depositRate: j.depositRate,
         returnBasis: dividendIncluded ? "gross_total_return" : "price_return",
         currency: j.currency ?? "local",

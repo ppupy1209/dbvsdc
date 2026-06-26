@@ -10,8 +10,8 @@ export const INDEX_LABELS: Record<IndexKey, string> = {
   sp: "S&P 500",
   nq: "나스닥100",
   dj: "다우존스 30",
-  ks: "코스피 종합",
-  kq: "코스닥 종합",
+  ks: "코스피200",
+  kq: "코스닥150",
 };
 
 export const YEARS: number[] = [
@@ -20,17 +20,27 @@ export const YEARS: number[] = [
   2021, 2022, 2023, 2024, 2025,
 ];
 
-// Arrays have the same length as YEARS. Unit: percent.
-// All arrays are gross total return approximations before costs.
+export const RETURN_YEARS: Record<IndexKey, number[]> = {
+  sp: YEARS,
+  nq: YEARS,
+  dj: YEARS,
+  ks: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+  kq: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+};
+
+// Unit: percent. Arrays align with RETURN_YEARS for each index key.
+// All arrays are total-return approximations before additional DC implementation costs.
 export const RETURNS: Record<IndexKey, number[]> = {
-  // S&P500 연간 총수익(TR, 배당 재투자 포함) — slickcharts
+  // S&P 500 annual total return, dividend reinvested.
   sp: [37.58, 22.96, 33.36, 28.58, 21.04, -9.1, -11.89, -22.1, 28.68, 10.88, 4.91, 15.79, 5.49, -37.0, 26.46, 15.06, 2.11, 16.0, 32.39, 13.69, 1.38, 11.96, 21.83, -4.38, 31.49, 18.4, 28.71, -18.11, 26.29, 25.02, 17.88],
-  // 나스닥100 연간 가격수익률 — slickcharts (1995·1996 동일값 42.54 확인 필요)
+  // Nasdaq 100 annual price return plus average dividend-yield approximation.
   nq: [43.34, 43.34, 21.43, 86.11, 102.75, -36.04, -31.85, -36.78, 49.92, 11.24, 2.29, 7.59, 19.47, -41.09, 54.34, 20.02, 3.5, 17.62, 35.79, 18.74, 9.23, 6.69, 32.32, -0.24, 38.76, 48.38, 27.43, -32.17, 54.61, 25.68, 20.97],
-  // 다우존스 연간 가격수익률 — slickcharts
+  // Dow Jones 30 annual price return plus average dividend-yield approximation.
   dj: [35.55, 28.11, 24.74, 18.2, 27.32, -4.07, -5, -14.66, 27.42, 5.25, 1.49, 18.39, 8.53, -31.74, 20.92, 13.12, 7.63, 9.36, 28.6, 9.62, -0.13, 15.52, 27.18, -3.53, 24.44, 9.35, 20.83, -6.68, 15.8, 14.98, 15.07],
-  ks: [-12.2, -24.2, -40.2, 50.8, 84.8, -49.2, 38.8, -8.2, 30.8, 11.8, 55.8, 5.8, 34.1, -38.9, 51.5, 23.7, -9.2, 11.2, 2.5, -3, 4.2, 5.1, 23.6, -15.5, 9.5, 32.6, 5.4, -23.1, 20.5, -7.8, 77.4],
-  kq: [0.6, -27.4, -42.4, 89.6, 241.6, -78.4, 37.6, -38.4, 1.6, -15.4, 84.6, -12.4, 16.6, -52.2, 55.3, 1.2, -0.9, 1.5, 1.3, 9.2, 26.3, -6.9, 27, -14.8, -0.3, 45.2, 7.4, -33.7, 28.2, -21.1, 37.1],
+  // KOSPI 200 annual price return plus 1.8%p average dividend-yield approximation.
+  ks: [24.03, -10.41, 12.65, 1.92, -5.84, 0.3, 9.97, 26.7, -17.53, 13.93, 34.32, 3.06, -24.35, 24.78, -9.42, 92.47],
+  // KOSDAQ 150 proxy: KODEX KOSDAQ150 ETF adjusted-close return.
+  kq: [-14.62, 53.8, -16.95, -10.62, 50.22, -1.57, -35.66, 45.18, -19.0, 37.37],
 };
 
 // Legacy helper for APIs that still return price returns. SAMPLE_MARKET.returns already include these yields.
@@ -39,10 +49,27 @@ export const DIVIDEND_YIELD: Record<IndexKey, number> = {
   nq: 0.8,
   dj: 2.1,
   ks: 1.8,
-  kq: 0.6,
+  kq: 0,
 };
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
+
+export function yearsForIndex(data: MarketData, key: IndexKey): number[] {
+  return data.returnYears?.[key] ?? data.years;
+}
+
+export function availableReturnYears(data: MarketData, indices: IndexKey[]): number[] {
+  if (!indices.length) return data.years;
+  const [first, ...rest] = indices;
+  const common = new Set(yearsForIndex(data, first));
+  for (const key of rest) {
+    const years = new Set(yearsForIndex(data, key));
+    for (const year of Array.from(common)) {
+      if (!years.has(year)) common.delete(year);
+    }
+  }
+  return Array.from(common).sort((a, b) => a - b);
+}
 
 export function addAverageDividendsToPriceReturns(
   returns: Record<IndexKey, number[]>
@@ -73,11 +100,11 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
     companies: ["골드만삭스", "마이크로소프트", "캐터필러", "유나이티드헬스", "애플"],
   },
   ks: {
-    desc: "한국거래소 유가증권시장 전체를 대표하는 종합지수. 구성 종목 수는 시장 편입·상장폐지에 따라 변동됩니다.",
+    desc: "한국 유가증권시장 대표 대형주 200개로 구성된 지수. 국내 DC ETF에서 가장 흔한 한국 주식 벤치마크입니다.",
     companies: ["삼성전자", "SK하이닉스", "LG에너지솔루션", "삼성바이오로직스", "현대차"],
   },
   kq: {
-    desc: "기술·성장 중소형주 중심의 코스닥 종합지수. 구성 종목 수는 시장 편입·상장폐지에 따라 변동됩니다.",
+    desc: "코스닥 대표 종목 150개를 담는 성장주 중심 지수. 현재 데이터는 KODEX 코스닥150 ETF 조정종가 프록시입니다.",
     companies: ["에코프로비엠", "알테오젠", "에코프로", "HLB", "엔켐"],
   },
 };
@@ -85,7 +112,8 @@ export const INDEX_META: Record<IndexKey, IndexMeta> = {
 // 시뮬레이터가 소비하는 시장 데이터. 백엔드 API 응답도 이 형태로 맞춘다.
 export interface MarketData {
   years: number[];
-  returns: Record<IndexKey, number[]>; // array length = years.length, unit: %
+  returns: Record<IndexKey, number[]>; // array length follows returnYears[key] when provided, unit: %
+  returnYears?: Partial<Record<IndexKey, number[]>>;
   depositRate: number; // safe-asset rate for the 30% sleeve, e.g. 0.03
   returnBasis?: "gross_total_return" | "price_return";
   currency?: "local";
@@ -97,6 +125,7 @@ export interface MarketData {
 export const SAMPLE_MARKET: MarketData = {
   years: YEARS,
   returns: RETURNS,
+  returnYears: RETURN_YEARS,
   depositRate: 0.03,
   returnBasis: "gross_total_return",
   currency: "local",

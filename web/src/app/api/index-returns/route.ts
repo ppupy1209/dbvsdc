@@ -18,5 +18,6 @@ export function GET() {
     years: SAMPLE_MARKET.years,
     depositRate: SAMPLE_MARKET.depositRate,
     returns: SAMPLE_MARKET.returns,
+    returnYears: SAMPLE_MARKET.returnYears,
   });
 }

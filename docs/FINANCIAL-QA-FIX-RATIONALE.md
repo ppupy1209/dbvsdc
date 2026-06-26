@@ -17,7 +17,8 @@
 
 2. 프론트와 백엔드 샘플 수익률을 통일했습니다.
    - 기존 Spring 샘플은 프론트 `indexData.ts`와 다른 값이어서 API 전환만으로 결과가 달라질 수 있었습니다.
-   - S&P500은 총수익률 실측값, Nasdaq100·Dow·KOSPI·KOSDAQ은 가격수익률에 평균 배당수익률을 더한 값으로 통일했습니다.
+   - S&P500 uses observed total returns; Nasdaq100/Dow30 use price returns plus average dividends; KOSPI200 uses price returns plus a 1.8%p average dividend approximation; KOSDAQ150 uses the KODEX KOSDAQ150 ETF adjusted-close proxy.
+   - Added `returnYears` so each index can expose its own maximum backtest range: KOSPI200 2010~2025, KOSDAQ150 2016~2025.
 
 3. DC 수익률에 보수적 비용 차감을 반영했습니다.
    - 안전자산 비용 차감: 연 0.10%p
@@ -44,6 +45,7 @@
 ## 유지해야 할 원칙
 
 - `returns`에 배당이 이미 포함되어 있으면 `DIVIDEND_YIELD`를 다시 더하지 마십시오.
+- `returns[key]` must align with `returnYears[key]`. Do not assume every index has the same historical start year.
 - API 응답에 `dividendIncluded: true`가 있으면 프론트에서 배당 보정을 하지 않아야 합니다.
 - DC 결과는 비용 차감 후 순수익률로 계산해야 합니다.
 - 미래 모드의 평균 시나리오는 CAGR 반복을 허용하지만, 반드시 최악 시나리오와 함께 제공해야 합니다. 평균값만 보여주면 하락장과 순서위험을 숨깁니다.
@@ -57,4 +59,5 @@
 - `web/src/lib/api.ts`: API 메타데이터 기반 배당 보정 방어 로직
 - `api/src/main/java/com/dbvsdc/api/market/MarketDataResponse.java`: 수익률 기준 메타데이터 추가
 - `api/src/main/java/com/dbvsdc/api/market/SampleMarketDataSource.java`: 프론트와 동일한 샘플 총수익률 데이터
+- `api/src/main/resources/db/migration/V2__seed_curated_index_returns.sql`: refreshes the production DB seed for annual index returns
 - `docs/api-spec.md`: API 계약 갱신

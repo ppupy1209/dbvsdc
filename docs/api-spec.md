@@ -27,7 +27,12 @@
   "dividendIncluded": true,
   "expenseIncluded": false,
   "depositRate": 0.03,
-  "years": [1995, 1996, "...", 2024],
+  "years": [1995, 1996, "...", 2025],
+  "returnYears": {
+    "sp": [1995, 1996, "...", 2025],
+    "ks": [2010, 2011, "...", 2025],
+    "kq": [2016, 2017, "...", 2025]
+  },
   "returns": {
     "sp": [34.0, 20.0, "...", 23.3],
     "nq": ["..."],
@@ -48,15 +53,16 @@
 | `dividendIncluded` | boolean | 배당 재투자 포함 여부. 신규 응답은 `true` |
 | `expenseIncluded` | boolean | ETF 보수·추적오차·거래비용 반영 여부. 현재 응답은 `false`이며 프론트 계산에서 보수적 비용 차감 |
 | `depositRate` | number | 안전자산 30% 금리 (예 0.03). `app_config`에서 |
-| `years` | number[] | 연도 오름차순 |
-| `returns` | object | 키: sp/nq/dj/ks/kq, 값: `years`와 같은 길이의 연수익률(%) |
+| `years` | number[] | 레거시 공통 연도 배열. 신규 계산은 `returnYears` 우선 사용 |
+| `returnYears` | object | 키별 연도 배열. 지수별 이력이 다를 수 있으므로 `returns[key]`와 같은 길이 |
+| `returns` | object | 키: sp/nq/dj/ks/kq, 값: `returnYears[key]`와 같은 길이의 연수익률(%) |
 
 ### 데이터 출처 (2026-06-24 변경: ETF 실시간 폐기 → 지수 연간 수익률 큐레이션)
-- `returns` 값은 **각 지수의 연간 총수익률 근사치(배당 재투자 포함·현지통화·비용 차감 전)**. ETF 시세 API를 쓰지 않는다.
+- `returns` 값은 **각 지수의 연간 총수익률 근사치(배당 재투자 포함·현지통화·비용 차감 전)**. 단, `kq`(코스닥150)는 지수 직접 시계열 접근 제한으로 KODEX 코스닥150 ETF 조정종가를 프록시로 사용한다.
 - **백엔드 구현**: `web/src/lib/indexData.ts`의 값을 **Flyway 시드(V2)** 로 MySQL `index_return_yearly`에 적재 → `LiveMarketDataSource`가 DB에서 읽어 서빙. **외부 API·키 불필요.**
 - 갱신: 매년 각 지수 1행씩 INSERT (또는 시드 마이그레이션 추가).
 - ⚠️ 해외 지수는 USD 기준. 원화 환산(환율)은 미반영 — 프론트는 별도 비용 차감만 적용하며, 환율 반영은 향후 옵션.
-- 출처: KOSPI/KOSDAQ=KRX·Wikipedia 연말 종가, S&P500/나스닥/다우=지수 공시. (DATA-SOURCES.md)
+- 출처: S&P500/나스닥100/다우존스30=지수 공시·Slickcharts, 코스피200=KOSPI 200 연말 종가 + 평균 배당 근사, 코스닥150=KODEX 코스닥150 ETF 조정종가 프록시. (DATA-SOURCES.md)
 
 ---
 

@@ -8,6 +8,8 @@ import {
   INDEX_META,
   IndexKey,
   SAMPLE_MARKET,
+  availableReturnYears,
+  yearsForIndex,
 } from "@/lib/indexData";
 import { cagrOf, formatMan, FutureScenario, Mode, RISK_ASSET_COST, SAFE_ASSET_COST, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
@@ -47,15 +49,20 @@ export default function Simulator() {
     };
   }, []);
 
+  const availableYears = useMemo(() => availableReturnYears(market, indices), [market, indices]);
+  const maxPeriod = Math.min(30, Math.max(1, availableYears.length));
+
+  const effectivePeriod = Math.min(period, maxPeriod);
+
   const r = useMemo(
-    () => simulate(salary, raise, period, indices, mode, market, { futureScenario }),
-    [salary, raise, period, indices, mode, market, futureScenario]
+    () => simulate(salary, raise, effectivePeriod, indices, mode, market, { futureScenario }),
+    [salary, raise, effectivePeriod, indices, mode, market, futureScenario]
   );
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
 
-  const ys = market.years;
+  const selectedYears = indices[0] ? yearsForIndex(market, indices[0]) : market.years;
   const maxBase = useMemo(() => {
     let m = 1;
     for (let i = 0; i <= r.n; i++) m = Math.max(m, r.dbArr[i], r.dcArr[i]);
@@ -87,10 +94,11 @@ export default function Simulator() {
     return null;
   }, [r]);
 
+  const chartYears = mode === "back" ? availableYears.slice(Math.max(0, availableYears.length - r.n)) : [];
   const yearLabel = (i: number) => {
     if (mode === "back") {
-      if (i === 0) return String(ys[ys.length - r.n] - 1);
-      return String(ys[ys.length - r.n + (i - 1)]);
+      if (i === 0) return String((chartYears[0] ?? selectedYears[0]) - 1);
+      return String(chartYears[i - 1] ?? "");
     }
     return i === 0 ? "지금" : `${i}년`;
   };
@@ -197,7 +205,7 @@ export default function Simulator() {
                 연 {(cagrOf(indices[0], market) * 100).toFixed(1)}%
               </span>
               <span className={s.indexAvgNote}>
-                {ys[0]}~{ys[ys.length - 1]} · 배당 재투자 포함
+                {selectedYears[0]}~{selectedYears[selectedYears.length - 1]} · 배당 재투자 포함
               </span>
             </div>
             <div className={s.indexCompanies}>
@@ -218,12 +226,12 @@ export default function Simulator() {
           <input
             type="range"
             min={1}
-            max={30}
+            max={maxPeriod}
             step={1}
-            value={period}
+            value={effectivePeriod}
             onChange={(e) => setPeriod(+e.target.value)}
           />
-          <span className={s.rowVal}>{period}년</span>
+          <span className={s.rowVal}>{effectivePeriod}년{maxPeriod < 30 ? ` / 최대 ${maxPeriod}년` : ""}</span>
         </div>
 
         <div className={s.row}>

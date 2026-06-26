@@ -1,4 +1,4 @@
-import s from "./Footer.module.css";
+﻿import s from "./Footer.module.css";
 
 export default function Footer() {
   return (
@@ -12,8 +12,9 @@ export default function Footer() {
           </li>
           <li>
             지수 수익률은 <b>배당 재투자 포함(총수익)</b> 기준입니다. S&amp;P500은 연간
-            총수익 실측, 나스닥100·다우는 가격수익률 실측 + 평균 배당, 코스피·코스닥은
-            가격수익률 + 평균 배당(임시)입니다. 출처: 미국 slickcharts, 한국 KRX(현지통화).
+            총수익 실측, 나스닥100·다우존스30은 가격수익률 + 평균 배당, 코스피200은
+            가격수익률 + 평균 배당 근사, 코스닥150은 KODEX 코스닥150 ETF 조정종가
+            프록시입니다.
           </li>
           <li>
             해외 지수는 <b>USD 기준</b>이라 원화로 환산(환율)하면 결과가 달라집니다 —

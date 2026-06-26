@@ -12,6 +12,7 @@ public record MarketDataResponse(
         boolean expenseIncluded,
         double depositRate,
         List<Integer> years,
+        Map<String, List<Integer>> returnYears,
         Map<String, List<Double>> returns
 ) {
 }
