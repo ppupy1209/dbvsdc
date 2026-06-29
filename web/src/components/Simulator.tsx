@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
+  INDEX_COST,
   INDEX_KEYS,
   INDEX_LABELS,
   INDEX_META,
@@ -208,6 +209,16 @@ export default function Simulator() {
               </span>
               <span className={s.indexAvgNote}>
                 {selectedYears[0]}~{selectedYears[selectedYears.length - 1]} · 배당 재투자 포함
+              </span>
+            </div>
+            <div className={s.indexAvg}>
+              <span className={s.indexAvgLabel}>비용 차감(DC 적용)</span>
+              <span className={s.indexAvgVal}>
+                연 −{(INDEX_COST[indices[0]].realCost * 100).toFixed(2)}%
+              </span>
+              <span className={s.indexAvgNote}>
+                {INDEX_COST[indices[0]].etf} 실부담비용
+                {INDEX_COST[indices[0]].verified ? "" : " (추정)"}
               </span>
             </div>
             <div className={s.indexCompanies}>

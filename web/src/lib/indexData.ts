@@ -53,6 +53,31 @@ export const DIVIDEND_YIELD: Record<IndexKey, number> = {
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
 
+// Product-level implementation cost for the risky (70%) sleeve, modeled per index
+// via a representative tracking ETF. We use 실부담비용률 (real cost burden = TER +
+// 매매·중개비용 등), an annual fraction — not the headline TER, which fee competition
+// has pushed misleadingly low. These are representative, editable defaults; refine per
+// product when better data exists. Source: issuer disclosures / 실부담비용 비교 (as of 2026-06).
+export interface IndexCost {
+  etf: string; // representative KRW-listed tracking ETF
+  realCost: number; // 실부담비용률, annual fraction (e.g. 0.0019 = 0.19%)
+  verified: boolean; // false = representative estimate, not separately sourced
+}
+
+export const INDEX_COST: Record<IndexKey, IndexCost> = {
+  sp: { etf: "TIGER 미국S&P500", realCost: 0.0014, verified: true },
+  nq: { etf: "TIGER 미국나스닥100", realCost: 0.0015, verified: true },
+  dj: { etf: "TIGER 미국다우존스30", realCost: 0.0018, verified: false },
+  ks: { etf: "KODEX 200", realCost: 0.0019, verified: true },
+  kq: { etf: "KODEX 코스닥150", realCost: 0.0032, verified: true },
+};
+
+// Average real cost burden across the selected indices (annual fraction).
+export function costForIndices(indices: IndexKey[]): number {
+  if (!indices.length) return 0;
+  return indices.reduce((sum, k) => sum + (INDEX_COST[k]?.realCost ?? 0), 0) / indices.length;
+}
+
 export function yearsForIndex(data: MarketData, key: IndexKey): number[] {
   return data.returnYears?.[key] ?? data.years;
 }

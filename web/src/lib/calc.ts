@@ -1,7 +1,7 @@
 // DB/DC retirement pension simulation model.
 // Amount unit is man-won. Market returns are gross total-return approximations.
 
-import { availableReturnYears, IndexKey, MarketData, yearsForIndex } from "./indexData";
+import { availableReturnYears, costForIndices, IndexKey, MarketData, yearsForIndex } from "./indexData";
 
 export type Mode = "back" | "fwd";
 export type FutureScenario = "average" | "worst";
@@ -32,6 +32,7 @@ export interface SimResult {
   dcIrpTax: number;
   irpPayoutYears: number;
   futureScenario: FutureScenario;
+  riskyCost: number;
 }
 
 export function cagrOf(k: IndexKey, data: MarketData): number {
@@ -86,8 +87,10 @@ function annualContribution(salaryMan: number, raise: number, yearIndex: number)
   return (salaryMan * Math.pow(1 + raise, yearIndex)) / 12;
 }
 
-function netBlendReturn(indexGrossReturn: number, dep: number): number {
-  return 0.3 * dep + 0.7 * indexGrossReturn;
+// riskyCost is the annual real cost burden of the risky sleeve's tracking ETF(s),
+// subtracted from the gross index return before blending with the safe sleeve.
+function netBlendReturn(indexGrossReturn: number, dep: number, riskyCost = 0): number {
+  return 0.3 * dep + 0.7 * (indexGrossReturn - riskyCost);
 }
 
 function returnForYear(data: MarketData, key: IndexKey, year: number): number | null {
@@ -111,9 +114,10 @@ function historicalNetReturns(
   data: MarketData,
   indices: IndexKey[],
   dep: number,
-  years: number[]
+  years: number[],
+  riskyCost: number
 ): number[] {
-  return years.map((year) => netBlendReturn(indexGrossReturn(data, indices, year, dep), dep));
+  return years.map((year) => netBlendReturn(indexGrossReturn(data, indices, year, dep), dep, riskyCost));
 }
 
 function terminalDcBalance(salaryMan: number, raise: number, rets: number[]): number {
@@ -129,12 +133,13 @@ function averageForwardReturns(
   n: number,
   indices: IndexKey[],
   data: MarketData,
-  dep: number
+  dep: number,
+  riskyCost: number
 ): number[] {
   const indexReturn = indices.length
     ? indices.reduce((sum, key) => sum + cagrOf(key, data), 0) / indices.length
     : dep;
-  return Array.from({ length: n }, () => netBlendReturn(indexReturn, dep));
+  return Array.from({ length: n }, () => netBlendReturn(indexReturn, dep, riskyCost));
 }
 
 function conservativeForwardReturns(
@@ -143,7 +148,8 @@ function conservativeForwardReturns(
   n: number,
   indices: IndexKey[],
   data: MarketData,
-  dep: number
+  dep: number,
+  riskyCost: number
 ): { rets: number[]; scenarioStart: number | null; scenarioEnd: number | null } {
   if (!indices.length) {
     return {
@@ -166,12 +172,12 @@ function conservativeForwardReturns(
   const windowSize = Math.min(n, avail);
   let worstStart = Math.max(0, avail - windowSize);
   let worstYears = years.slice(worstStart, worstStart + windowSize);
-  let worstRets = historicalNetReturns(data, indices, dep, worstYears);
+  let worstRets = historicalNetReturns(data, indices, dep, worstYears, riskyCost);
   let worstBalance = terminalDcBalance(salaryMan, raise, worstRets);
 
   for (let start = 0; start <= avail - windowSize; start++) {
     const candidateYears = years.slice(start, start + windowSize);
-    const candidate = historicalNetReturns(data, indices, dep, candidateYears);
+    const candidate = historicalNetReturns(data, indices, dep, candidateYears, riskyCost);
     const balance = terminalDcBalance(salaryMan, raise, candidate);
     if (balance < worstBalance) {
       worstBalance = balance;
@@ -207,24 +213,25 @@ export function simulate(
   let n = yearsInput;
 
   const years = availableReturnYears(data, indices);
+  const riskyCost = costForIndices(indices);
 
   if (mode === "back") {
     n = Math.min(yearsInput, years.length);
     const selectedYears = years.slice(Math.max(0, years.length - n));
     calendarStart = selectedYears[0] ?? null;
     rets = selectedYears.length
-      ? historicalNetReturns(data, indices, dep, selectedYears)
+      ? historicalNetReturns(data, indices, dep, selectedYears, riskyCost)
       : Array.from({ length: n }, () => netBlendReturn(dep, dep));
   } else if (futureScenario === "average") {
     // Average scenario repeats the long-run CAGR, so it can project the full
     // requested horizon regardless of how much history each index has.
     n = yearsInput;
-    rets = averageForwardReturns(n, indices, data, dep);
+    rets = averageForwardReturns(n, indices, data, dep, riskyCost);
   } else {
     // Worst scenario needs a real historical window, so it is bounded by the
     // available history. n follows the window length actually returned.
     n = Math.min(yearsInput, years.length || yearsInput);
-    const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
+    const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep, riskyCost);
     rets = scenario.rets;
     n = rets.length || n;
     scenarioStart = scenario.scenarioStart;
@@ -270,6 +277,7 @@ export function simulate(
     dcIrpTax: irpRetirementTax(dcLumpTax),
     irpPayoutYears: IRP_PAYOUT_YEARS,
     futureScenario,
+    riskyCost,
   };
 }
 

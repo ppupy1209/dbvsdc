@@ -20,10 +20,13 @@
    - S&P500 uses observed total returns; NASDAQ 100/Dow Jones 30 use price returns plus average dividends; KOSPI 200 uses price returns plus a 1.8%p average dividend approximation; KOSDAQ 150 uses the KODEX KOSDAQ 150 ETF adjusted-close proxy.
    - Added `returnYears` so each index can expose its own maximum backtest range: KOSPI 200 2010~2025, KOSDAQ 150 2016~2025.
 
-3. Removed the conservative DC cost-haircut constants.
-   - Removed the hidden global cost-haircut constants from the calculation.
-   - Current blended return is `0.3 * depositRate + 0.7 * selectedIndexReturn`.
-   - Product TER, tracking difference, hedge cost, and trading cost are not modeled in this version; add them later as product-level data, not hidden global constants.
+3. DC 비용을 상품(ETF)별 명시 변수로 모델링했습니다. (2026-06-29 갱신)
+   - 기존: 숨은 전역 비용 헤어컷 상수 제거 → `0.3 * depositRate + 0.7 * selectedIndexReturn` (비용 미반영).
+   - 현재: 지수별 대표 추종 ETF의 **실부담비용률**(`INDEX_COST` in `indexData.ts`)을 위험자산(70%)에서 차감.
+     - 블렌드 수익률 = `0.3 * depositRate + 0.7 * (selectedIndexReturn - riskyCost)`.
+     - `riskyCost` = 선택 지수들의 평균 실부담비용률(`costForIndices`). sp 0.14%, nq 0.15%, dj 0.18%(추정), ks 0.19%, kq 0.32%.
+     - 명목 총보수가 아닌 **실부담비용**(보수+매매·중개비 등)을 쓴 이유: 보수 경쟁으로 명목 총보수(0.006~0.007%)가 비현실적으로 낮음.
+   - 헤지비용/환율은 여전히 미반영(환율 보류 결정). 추적오차는 실부담비용에 일부 포함되나 별도 변수로 분리하지 않음.
 4. DC 부담금 납입 시점을 보수화했습니다.
    - 기존: `bal = (bal + contribution) * (1 + ret)`
    - 변경: `bal = bal * (1 + ret) + contribution`

@@ -8,6 +8,10 @@ QA 후속 정리 (상세 DEVLOG 2026-06-29):
 - **미래 시뮬레이션 30년 투영 가능**으로 수정 — 국내 지수(KOSPI200 16년·KOSDAQ150 10년)도 미래 모드는 30년까지. 평균 시나리오는 CAGR 반복으로 전 기간 투영, 최악 시나리오는 가용 과거 윈도우로 제한(라벨 표기). 과거 백테스트는 데이터 길이 제한 유지.
 - **임금피크 잔재 코드 제거** (`calc.ts`의 `PEAK_CUT`/`wagePeak`).
 - 검토 결과 front↔back 시드 정합성 OK. nq 1995·1996 동일값(43.34)은 Codex 검증 결과 정확함 확인(둘 다 가격수익률 42.54% — 우연의 일치).
+- **배당·비용·환율 정밀화 (Phase 2):**
+  - 비용: 지수별 대표 ETF **실부담비용률**을 위험자산(70%)에서 차감하는 `INDEX_COST` 도입(`indexData.ts`)·`calc.ts` 반영·UI/푸터 표기. ✅
+  - 배당/TR: nq·dj는 추종 ETF(QQQ·DIA) 총수익과 대조해 현 근사가 ±0.5%p로 충분함을 확인 → 교체 보류. ks·kq의 gross KRX TR은 자동수집 불가로 보류(수동 CSV 필요). (상세 DATA-SOURCES.md)
+  - 환율: 보류 결정.
 
 ## 지금 상태 (2026-06-26)
 
@@ -48,7 +52,12 @@ QA 후속 정리 (상세 DEVLOG 2026-06-29):
 - [x] 데이터 전략 확정 — 지수 연간 수익률 큐레이션 보유(현 데이터가 이미 정확함: S&P·KOSPI 공시값과 일치 검증). "예시값" 라벨 → "지수 연간 수익률"로 정정. API 키 불필요 ✅
 - [ ] **Codex(세션 리셋 후): Flyway 시드 V2** — indexData.ts 값을 MySQL `index_return_yearly`에 적재 + `LiveMarketDataSource`가 DB 읽어 서빙(외부 API/키 없음). ETF 실시간 연동 폐기.
 - [x] ~~**nq 1995·1996 동일값(43.34) 검증**~~ → **정확함 확인** (2026-06-29, Codex). slickcharts 기준 1995·1996 가격수익률이 둘 다 42.54%(연말종가 404.27→576.23→821.36, 우연의 일치). +0.8 배당 가산 → 43.34 동일. 세 파일 모두 올바른 값, 수정 불필요.
-- [ ] **Dividend/cost/FX precision** - current data uses total-return approximations. Add actual index TR, domestic ETF TER/other costs/tracking difference, and USD/KRW annual FX series as explicit variables.
+- [~] **Dividend/cost/FX precision** (2026-06-29):
+  - [x] 비용: 상품(ETF)별 실부담비용률 `INDEX_COST`로 위험자산에서 차감.
+  - [x] 배당/TR 점검: nq·dj 현 근사 충분(ETF 총수익 대조). 교체 불필요.
+  - [ ] **ks·kq gross KRX TR 수동 확보** — `data.krx.co.kr`에서 코스피200 TR·코스닥150 TR 연간 CSV 다운로드 후 `indexData.ts`+백엔드 반영. (자동 수집 불가)
+  - [ ] **dj 실부담비용 개별 검증** — 현재 0.18%는 미국ETF 대표 추정값.
+  - [ ] **환율(FX)** — USD/KRW 연간 시계열 + 원화 환산 토글 (보류 중).
 - [x] UI/로직 다듬기 (다크모드·총수익·미래 시뮬레이션·호버 DC수익률·연평균 표시 등) ✅ (2026-06-26)
 - [ ] 배포 후: `NEXT_PUBLIC_API_BASE`를 AWS 백엔드로 설정 → "실데이터" 배지 전환
 - [ ] 프론트 후속: 결과 공유(URL 인코딩), 개발기 블로그, Vercel 배포
