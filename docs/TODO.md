@@ -7,7 +7,7 @@
 QA 후속 정리 (상세 DEVLOG 2026-06-29):
 - **미래 시뮬레이션 30년 투영 가능**으로 수정 — 국내 지수(KOSPI200 16년·KOSDAQ150 10년)도 미래 모드는 30년까지. 평균 시나리오는 CAGR 반복으로 전 기간 투영, 최악 시나리오는 가용 과거 윈도우로 제한(라벨 표기). 과거 백테스트는 데이터 길이 제한 유지.
 - **임금피크 잔재 코드 제거** (`calc.ts`의 `PEAK_CUT`/`wagePeak`).
-- 검토 결과 front↔back 시드 정합성 OK. nq 1995·1996 동일값(43.34)은 데이터 검증 과제로 등재(아래).
+- 검토 결과 front↔back 시드 정합성 OK. nq 1995·1996 동일값(43.34)은 Codex 검증 결과 정확함 확인(둘 다 가격수익률 42.54% — 우연의 일치).
 
 ## 지금 상태 (2026-06-26)
 
@@ -47,7 +47,7 @@ QA 후속 정리 (상세 DEVLOG 2026-06-29):
 - [x] 프론트↔백엔드 end-to-end 연결 검증 — `web/.env.local`(NEXT_PUBLIC_API_BASE=http://localhost:8090) → 프론트가 백엔드 호출 200·CORS 정상·화면 반영 확인 ✅
 - [x] 데이터 전략 확정 — 지수 연간 수익률 큐레이션 보유(현 데이터가 이미 정확함: S&P·KOSPI 공시값과 일치 검증). "예시값" 라벨 → "지수 연간 수익률"로 정정. API 키 불필요 ✅
 - [ ] **Codex(세션 리셋 후): Flyway 시드 V2** — indexData.ts 값을 MySQL `index_return_yearly`에 적재 + `LiveMarketDataSource`가 DB 읽어 서빙(외부 API/키 없음). ETF 실시간 연동 폐기.
-- [ ] **nq 1995·1996 동일값(43.34) 검증** — price 42.54 + 배당 0.8 가산값. 두 해 동일 수익률이 실제인지 출처(slickcharts) 재확인 후 프론트(`indexData.ts`)·백엔드(`SampleMarketDataSource.java`, `V2` SQL) 일괄 수정. (데이터/Codex 영역)
+- [x] ~~**nq 1995·1996 동일값(43.34) 검증**~~ → **정확함 확인** (2026-06-29, Codex). slickcharts 기준 1995·1996 가격수익률이 둘 다 42.54%(연말종가 404.27→576.23→821.36, 우연의 일치). +0.8 배당 가산 → 43.34 동일. 세 파일 모두 올바른 값, 수정 불필요.
 - [ ] **Dividend/cost/FX precision** - current data uses total-return approximations. Add actual index TR, domestic ETF TER/other costs/tracking difference, and USD/KRW annual FX series as explicit variables.
 - [x] UI/로직 다듬기 (다크모드·총수익·미래 시뮬레이션·호버 DC수익률·연평균 표시 등) ✅ (2026-06-26)
 - [ ] 배포 후: `NEXT_PUBLIC_API_BASE`를 AWS 백엔드로 설정 → "실데이터" 배지 전환
