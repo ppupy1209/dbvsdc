@@ -50,7 +50,9 @@ export default function Simulator() {
   }, []);
 
   const availableYears = useMemo(() => availableReturnYears(market, indices), [market, indices]);
-  const maxPeriod = Math.min(30, Math.max(1, availableYears.length));
+  // Backtest is bounded by available history; the future average scenario can
+  // project a full 30-year career regardless of each index's history length.
+  const maxPeriod = mode === "back" ? Math.min(30, Math.max(1, availableYears.length)) : 30;
 
   const effectivePeriod = Math.min(period, maxPeriod);
 

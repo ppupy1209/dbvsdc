@@ -8,11 +8,9 @@ export type FutureScenario = "average" | "worst";
 
 export const DEPOSIT_RATE = 0.03;
 export const IRP_PAYOUT_YEARS = 15;
-export const PEAK_CUT = 0.3;
 export const RETIRE_LOCAL_TAX_RATE = 0.1;
 
 export interface SimOptions {
-  wagePeak?: boolean;
   futureScenario?: FutureScenario;
 }
 
@@ -217,16 +215,20 @@ export function simulate(
     rets = selectedYears.length
       ? historicalNetReturns(data, indices, dep, selectedYears)
       : Array.from({ length: n }, () => netBlendReturn(dep, dep));
+  } else if (futureScenario === "average") {
+    // Average scenario repeats the long-run CAGR, so it can project the full
+    // requested horizon regardless of how much history each index has.
+    n = yearsInput;
+    rets = averageForwardReturns(n, indices, data, dep);
   } else {
+    // Worst scenario needs a real historical window, so it is bounded by the
+    // available history. n follows the window length actually returned.
     n = Math.min(yearsInput, years.length || yearsInput);
-    if (futureScenario === "average") {
-      rets = averageForwardReturns(n, indices, data, dep);
-    } else {
-      const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
-      rets = scenario.rets;
-      scenarioStart = scenario.scenarioStart;
-      scenarioEnd = scenario.scenarioEnd;
-    }
+    const scenario = conservativeForwardReturns(salaryMan, raise, n, indices, data, dep);
+    rets = scenario.rets;
+    n = rets.length || n;
+    scenarioStart = scenario.scenarioStart;
+    scenarioEnd = scenario.scenarioEnd;
   }
 
   let bal = 0;
@@ -242,11 +244,6 @@ export function simulate(
     bal = bal * (1 + ret) + contribution;
     dcArr.push(bal);
     dbArr.push(contribution * (i + 1));
-  }
-
-  if (opts.wagePeak) {
-    const finalContribution = annualContribution(salaryMan, raise, n - 1);
-    dbArr[n] = finalContribution * (1 - PEAK_CUT) * n;
   }
 
   const cagr = Math.pow(prod, 1 / n) - 1;
