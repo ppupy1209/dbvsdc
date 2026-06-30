@@ -39,6 +39,14 @@ S = requests.Session()
 S.headers.update(HEADERS)
 
 
+def prime() -> None:
+    """KRX는 POST 전에 로더 페이지를 한 번 GET해 세션 쿠키를 받아야 JSON을 준다."""
+    try:
+        S.get(HEADERS["Referer"], timeout=30)
+    except Exception as e:
+        print(f"// 세션 초기화 GET 실패: {e}")
+
+
 def post(data: dict) -> dict:
     r = S.post(GETJSON, data=data, timeout=30)
     try:
@@ -52,8 +60,12 @@ def post(data: dict) -> dict:
 def find_index(search: str) -> list[dict]:
     """KRX 지수 finder → [{full_code, short_code, codeName, marketName, ...}]."""
     j = post({"bld": "dbms/comm/finder/finder_equidx", "mktsel": "ALL", "searchText": search})
-    # finder 결과 키가 버전마다 block1 / output 으로 다를 수 있어 둘 다 시도
-    return j.get("block1") or j.get("output") or []
+    rows = j.get("block1") or j.get("output") or []
+    if not rows:
+        # 구조를 모르므로 원문을 그대로 덤프 → 이걸 붙여주면 매핑을 확정한다.
+        print(f"// [진단] finder('{search}') 응답 키={list(j.keys())}; 원문 ↓")
+        print("//", json.dumps(j, ensure_ascii=False)[:1500])
+    return rows
 
 
 def series(full_code: str, short_code: str) -> list[dict]:
@@ -130,5 +142,6 @@ def run(label: str, key: str, search: str, exact: str) -> None:
 
 if __name__ == "__main__":
     print("// KRX 공식 gross TR (requests 직접 호출). 반영 시 indexData의 배당 가산(+1.8 등) 제거.\n")
+    prime()
     run("KOSPI 200 TR", "ks", "200", "코스피 200 TR")
     run("KOSDAQ 150 TR", "kq", "150", "코스닥 150 TR")
