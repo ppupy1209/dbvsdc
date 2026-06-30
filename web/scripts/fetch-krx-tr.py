@@ -57,15 +57,45 @@ def post(data: dict) -> dict:
         return {}
 
 
-def find_index(search: str) -> list[dict]:
-    """KRX 지수 finder → [{full_code, short_code, codeName, marketName, ...}]."""
-    j = post({"bld": "dbms/comm/finder/finder_equidx", "mktsel": "ALL", "searchText": search})
-    rows = j.get("block1") or j.get("output") or []
-    if not rows:
-        # 구조를 모르므로 원문을 그대로 덤프 → 이걸 붙여주면 매핑을 확정한다.
-        print(f"// [진단] finder('{search}') 응답 키={list(j.keys())}; 원문 ↓")
-        print("//", json.dumps(j, ensure_ascii=False)[:1500])
-    return rows
+MKTSELS = ["ALL", "STK", "KSQ", "1", "2", ""]
+
+
+def find_index(searches: list[str]) -> list[dict]:
+    """finder_equidx는 mktsel/searchText 조합이 까다로워, 여러 조합을 쓸어본다."""
+    last = {}
+    for st in searches:
+        for mk in MKTSELS:
+            j = post({"bld": "dbms/comm/finder/finder_equidx", "mktsel": mk, "searchText": st})
+            last = j
+            rows = j.get("block1") or j.get("output") or []
+            if rows:
+                print(f"// [ok] finder 매칭: mktsel={mk!r}, searchText={st!r} → {len(rows)}건")
+                return rows
+    print(f"// [진단] finder 전 조합 실패. 마지막 응답 키={list(last.keys())}; 원문 ↓")
+    print("//", json.dumps(last, ensure_ascii=False)[:600])
+    return []
+
+
+def list_all_indices() -> None:
+    """파인더가 안 되면 전체지수 목록에서 TR 지수의 코드를 찾도록 덤프(백업 진단)."""
+    print("// [백업] 전체지수 목록(MDCSTAT00101)에서 'TR' 포함 지수 탐색 ↓")
+    for mid in ["01", "02", "03", "04", "05"]:
+        j = post({
+            "bld": "dbms/MDC/STAT/standard/MDCSTAT00101",
+            "locale": "ko_KR",
+            "idxIndMidclssCd": mid,
+            "trdDd": "20251230",
+            "share": "2",
+            "money": "3",
+            "csvxls_isNo": "false",
+        })
+        rows = j.get("output") or j.get("block1") or []
+        if not rows:
+            continue
+        trs = [r for r in rows if "TR" in json.dumps(r, ensure_ascii=False)]
+        print(f"// midclss={mid}: 총 {len(rows)}건, TR 포함 {len(trs)}건. 첫 행 키={list(rows[0].keys())}")
+        for r in trs[:8]:
+            print("//  TR行:", json.dumps(r, ensure_ascii=False))
 
 
 def series(full_code: str, short_code: str) -> list[dict]:
@@ -107,10 +137,10 @@ def annual_returns(rows: list[dict]) -> dict[int, float]:
     }
 
 
-def run(label: str, key: str, search: str, exact: str) -> None:
-    cands = find_index(search)
+def run(label: str, key: str, searches: list[str], exact: str) -> None:
+    cands = find_index(searches)
     if not cands:
-        print(f"// {label}: 파인더 결과 비어있음 — 위 응답 원문 확인 필요.")
+        print(f"// {label}: 파인더 결과 비어있음.")
         return
     pick = (
         next((c for c in cands if c.get("codeName") == exact), None)
@@ -143,5 +173,6 @@ def run(label: str, key: str, search: str, exact: str) -> None:
 if __name__ == "__main__":
     print("// KRX 공식 gross TR (requests 직접 호출). 반영 시 indexData의 배당 가산(+1.8 등) 제거.\n")
     prime()
-    run("KOSPI 200 TR", "ks", "200", "코스피 200 TR")
-    run("KOSDAQ 150 TR", "kq", "150", "코스닥 150 TR")
+    run("KOSPI 200 TR", "ks", ["코스피 200", "코스피", "200"], "코스피 200 TR")
+    run("KOSDAQ 150 TR", "kq", ["코스닥 150", "코스닥", "150"], "코스닥 150 TR")
+    list_all_indices()
