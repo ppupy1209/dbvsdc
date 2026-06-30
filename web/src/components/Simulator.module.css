@@ -460,6 +460,36 @@
   color: var(--text-secondary);
 }
 
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.actionBtn {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.actionBtn:hover {
+  background: var(--bg-secondary);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+@media print {
+  .noPrint {
+    display: none !important;
+  }
+}
+
 .legendRow {
   display: flex;
   align-items: center;

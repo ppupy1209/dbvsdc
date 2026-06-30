@@ -104,6 +104,41 @@ body {
   border-bottom: 0.5px solid var(--border);
 }
 
+/* 인쇄/PDF 저장 시: 라이트 팔레트 강제 + 네비·인터랙션 크롬 숨김 */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    --bg-page: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-secondary: #f4f4f1;
+    --border: rgba(20, 20, 25, 0.12);
+    --border-strong: rgba(20, 20, 25, 0.2);
+    --text: #16161a;
+    --text-secondary: #44454a;
+    --text-tertiary: #6a6a70;
+    --accent: #2563eb;
+    --accent-text: #1d4ed8;
+    --accent-bg: #eef4ff;
+    --neutral: #5a5a60;
+    --danger: #b42318;
+    --warning: #b54708;
+    --shadow-card: none;
+    --shadow-soft: none;
+  }
+  header {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+  }
+  * {
+    transition: none !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;

@@ -16,6 +16,7 @@ import {
 } from "@/lib/indexData";
 import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, historicalWinRate, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
+import { decodeShare, encodeShare } from "@/lib/shareState";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -38,7 +39,9 @@ export default function Simulator() {
   const [source, setSource] = useState<DataSource>("sample");
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
   const [hover, setHover] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const hydrated = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -51,6 +54,19 @@ export default function Simulator() {
     return () => {
       alive = false;
     };
+  }, []);
+
+  // Hydrate state from a shared link once on mount (client-only to avoid SSR mismatch).
+  useEffect(() => {
+    const d = decodeShare(window.location.search);
+    if (d.mode) setMode(d.mode);
+    if (d.index) setIndices([d.index]);
+    if (d.period !== undefined) setPeriod(d.period);
+    if (d.salary !== undefined) setSalary(d.salary);
+    if (d.raise !== undefined) setRaise(d.raise);
+    if (d.scenario) setFutureScenario(d.scenario);
+    if (d.krw !== undefined) setKrwConvert(d.krw);
+    hydrated.current = true;
   }, []);
 
   const availableYears = useMemo(() => availableReturnYears(market, indices), [market, indices]);
@@ -81,6 +97,39 @@ export default function Simulator() {
   );
   // 세후(IRP 연금수령) 실수령 차이 = DC 세후 − DB 세후.
   const afterTaxDcDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
+
+  const shareState = useMemo(
+    () => ({
+      mode,
+      index: indices[0] ?? ("sp" as const),
+      period: effectivePeriod,
+      salary,
+      raise,
+      scenario: futureScenario,
+      krw: krwActive,
+    }),
+    [mode, indices, effectivePeriod, salary, raise, futureScenario, krwActive]
+  );
+
+  // Keep the address bar in sync (after hydration) so the current view is itself
+  // a shareable link, and the browser back/forward/refresh restores it.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    window.history.replaceState(null, "", `${window.location.pathname}?${encodeShare(shareState)}`);
+  }, [shareState]);
+
+  const onShare = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?${encodeShare(shareState)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard blocked (insecure context / permissions) — at least keep the
+      // URL bar in sync so the user can copy it manually.
+      window.history.replaceState(null, "", `${window.location.pathname}?${encodeShare(shareState)}`);
+    }
+  };
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
@@ -649,6 +698,15 @@ export default function Simulator() {
         권유하지 않습니다. 과거 수익률은 미래를 보장하지 않으며, 개인 상황에 따라 결과가 달라질 수
         있습니다. 투자·세무 판단은 전문가와 상담하세요.
       </p>
+
+      <div className={`${s.actions} ${s.noPrint}`}>
+        <button type="button" className={s.actionBtn} onClick={onShare}>
+          {copied ? "링크 복사됨 ✓" : "결과 링크 복사"}
+        </button>
+        <button type="button" className={s.actionBtn} onClick={() => window.print()}>
+          PDF로 저장 · 인쇄
+        </button>
+      </div>
     </div>
   );
 }
