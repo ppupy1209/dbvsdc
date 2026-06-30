@@ -25,12 +25,22 @@
 
 ## ★ KRX 공식 gross TR 수동 확보 절차 (ks·kq 잔여)
 
-코스피200 TR·코스닥150 TR(배당 재투자 총수익지수)은 **KRX 고유 지수**라 자동 수집 불가(OTP 게이트). 아래 수동 절차로 CSV를 받아 `RETURNS.ks`/`RETURNS.kq`를 교체하면 현재 "가격+평균배당/ETF 프록시" 근사를 대체할 수 있다.
+코스피200 TR·코스닥150 TR(배당 재투자 총수익지수)은 **KRX 고유 지수**라 공개 접근 불가(공개 JSON 엔드포인트 403, Yahoo엔 *가격*지수만, 다운로드는 OTP 토큰 흐름 필요). 자동/수동 두 경로:
 
-1. [data.krx.co.kr](http://data.krx.co.kr) → **통계 → 지수 → 주가지수 → 전체지수 시세**.
-2. 지수: **코스피 200 TR**(코드 1035) / **코스닥 150 TR**(코드 2203) 선택. 기간: 연도별(매년 마지막 영업일).
-3. CSV 다운로드(OTP 자동 처리됨) → 연말종가로 연간 수익률 계산 = `종가_t / 종가_{t-1} − 1`.
-4. `indexData.ts`의 `RETURNS.ks`(2003~)·`RETURNS.kq`(코스피200 TR은 더 길게 가능) 교체, `dividendIncluded` 유지, 배당 가산(+1.8) 제거(TR엔 이미 포함).
+### ① 자동 (권장) — OTP 손작업 없음
+[`web/scripts/fetch-krx-tr.py`](../web/scripts/fetch-krx-tr.py). `pykrx`가 OTP 핸드셰이크를 내부 처리한다. 네트워크 되는 PC에서:
+```
+pip install pykrx
+python web/scripts/fetch-krx-tr.py
+```
+출력된 `RETURNS.ks`/`RETURNS.kq`·`RETURN_YEARS`를 `indexData.ts`에 붙여넣고, **배당 가산 제거**(`DIVIDEND_YIELD.ks` 1.8→0; kq는 ETF 프록시 표기 제거). TR엔 배당이 이미 포함.
+- ⚠️ 이 저장소 샌드박스는 외부망 차단이라 여기선 실행 불가 — 사용자 로컬/네트워크 환경에서 실행. KRX 지수명이 바뀌면 스크립트가 못 찾을 수 있어, 그땐 `stock.get_index_ticker_list(market="KOSPI")` 출력을 확인.
+
+### ② 수동 (스크립트가 안 될 때)
+1. [data.krx.co.kr](http://data.krx.co.kr) → **통계 → 지수 → 주가지수 → 개별지수 시세 추이**.
+2. **코스피 200 TR** / **코스닥 150 TR** 선택, 기간 설정 → CSV 다운로드(브라우저가 OTP 처리).
+3. 연말종가로 연간 수익률 = `종가_t / 종가_{t-1} − 1` → `RETURNS` 교체, 배당 가산 제거.
+
 - 코스닥150 TR은 지수 기준일 2010-01-04 → 그 이전 불가. 코스피200 TR은 1990년대까지 존재(1995~2002 확장 가능).
 
 ## 수익률 기준 검증 (2026-06-29)

@@ -14,7 +14,8 @@
 - **(후속3) 결과 공유 URL + PDF:** `shareState.ts`(인코딩·방어적 디코딩) + 주소창 자동 동기화 + "링크 복사"·"PDF로 저장(window.print + @media print)". 테스트 35개.
 - [x] 프론트 후속: **결과 공유(URL 인코딩)** ✅ (2026-06-30)
 - **(후속4) 금리·환율 공식값 반영:** 연도별 예금금리·USD/KRW를 **World Bank 공식 시계열**(FR.INR.DPST·PA.NUS.FCRF)로 교체. 재현 스크립트 `web/scripts/fetch-official-rates.mjs`. KRX TR 수동 절차 DATA-SOURCES에 명시. (상세 DEVLOG)
-- ⚠️ **잔여(정밀화):** ① 환율 연말종가(BOK ECOS 731Y001) 정밀화(현재 연평균) ② ks·kq **KRX 공식 gross TR** 수동 다운로드(절차 문서화됨) ③ 1995·2025 예금/환율 잠정치.
+- **(후속5) KRX TR 자동화:** `web/scripts/fetch-krx-tr.py`(pykrx, OTP 자동 처리) — 사용자가 네트워크 PC에서 실행 시 코스피200/코스닥150 TR 배열 출력. **수동 OTP 손작업 제거.** (샌드박스 외부망 차단이라 실행은 사용자 환경)
+- ⚠️ **잔여(정밀화):** ① 환율 연말종가(BOK ECOS 731Y001) 정밀화(현재 연평균) ② ks·kq KRX 공식 gross TR — **스크립트 실행은 사용자 액션**(pykrx) ③ 1995·2025 예금/환율 잠정치.
 
 ## 지금 상태 (2026-06-29)
 
