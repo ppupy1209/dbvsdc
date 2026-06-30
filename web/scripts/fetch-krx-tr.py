@@ -1,36 +1,35 @@
 #!/usr/bin/env python3
 """
-KRX 공식 gross TR (코스피 200 TR · 코스닥 150 TR) — pykrx + KRX 로그인.
+KRX 공식 가격지수(코스피 200 · 코스닥 150) 연간 수익률 — pykrx + KRX 로그인.
 
-배경: KRX가 지수 시세 데이터를 로그인 뒤로 옮겨, 인증 없이는 시세 엔드포인트가
-LOGOUT(HTTP 400)만 반환한다(requests 직접호출로 확인 완료). 공개 자동완성
-파인더에는 TR 지수 자체가 없었다. 따라서 KRX 회원 로그인이 필요하다.
+배경
+  KRX gross TR 지수는 무료 경로(pykrx)로 받을 수 없음이 실측으로 확정됐다
+  (로그인해도 지수목록에 TR 미포함; 자세히는 docs/DATA-SOURCES.md "최종 결론").
+  대신 *가격*지수(코스피 200·코스닥 150)는 목록에 있으므로, 1stock1.com 스크랩을
+  KRX 공식 데이터로 교체하고 가능한 한 과거까지 이력을 확장한다.
+    - ks(코스피 200): 현재 2003~ (1stock1) → KRX 공식, 1990년대까지 확장 시도.
+    - kq(코스닥 150): 기준일 2010-01-04 → KRX 공식, 2010/2011~로 확장 시도.
+  이 값은 *가격수익률*(배당 제외)이다. 반영 시 배당 처리:
+    - ks: + 평균배당(현행 1.8%) 유지.
+    - kq: KOSDAQ 배당수익률 낮음(~0.5%) — 통합 시 결정.
 
 준비 (최초 1회)
   1. https://data.krx.co.kr 회원가입(무료).
-  2. 환경변수 설정 — PowerShell:
-       $env:KRX_ID = "아이디"
-       $env:KRX_PW = "비밀번호"
-     (영구: setx KRX_ID "아이디" ; setx KRX_PW "비밀번호"  → 새 터미널부터 적용)
-  3. pip install pykrx
-     ⚠️ Python 3.11~3.12 권장. 3.14에서 pandas/pykrx가 깨지면, 3.12로 가상환경:
-        py -3.12 -m venv .venv ; .venv\\Scripts\\activate ; pip install pykrx
+  2. PowerShell:  $env:KRX_ID="아이디" ; $env:KRX_PW="비밀번호"
+  3. pip install pykrx   (Python 3.11~3.12 권장; 3.14에서 깨지면 3.12 venv)
 
 실행
   python web/scripts/fetch-krx-tr.py
-
 출력
-  성공 → ks/kq 연간 수익률 배열. indexData.ts에 반영하고 배당 가산 제거
-         (DIVIDEND_YIELD.ks 1.8→0; kq ETF 프록시 표기 제거 — TR엔 배당 포함).
-  TR 미발견 → 로그인해도 목록에 TR이 없으면 가용 지수명을 전부 출력하니,
-             그 출력을 붙여주세요(다음 판단: KRX OpenAPI 키 or 현 근사 유지).
+  ks/kq 연도·수익률 배열 → indexData.ts 반영. (어디까지 거슬러 오는지 확인용으로
+  연도 배열도 함께 출력.)
 """
 import os
 import sys
 from datetime import datetime
 
 if not (os.environ.get("KRX_ID") and os.environ.get("KRX_PW")):
-    print("// ⚠️ KRX_ID / KRX_PW 환경변수 미설정 → KRX 로그인 데이터는 비어서 옵니다.")
+    print("// ⚠️ KRX_ID / KRX_PW 미설정 → 로그인 데이터 비어서 옴.")
     print("//    PowerShell:  $env:KRX_ID='아이디'; $env:KRX_PW='비밀번호'  후 재실행\n")
 
 try:
@@ -38,8 +37,8 @@ try:
 except ImportError:
     sys.exit("pykrx 미설치:  pip install pykrx")
 
-START = "20010101"
-END = f"{datetime.now().year - 1}1231"
+START = "19900101"  # 지수가 존재하는 만큼만 돌아옴(코스닥150은 2010~)
+END = f"{datetime.now().year}1231"
 TODAY = datetime.now().strftime("%Y%m%d")
 
 
@@ -58,12 +57,11 @@ def list_indices(market: str) -> list[tuple[str, str]]:
     return out
 
 
-def find_tr(indices: list[tuple[str, str]], needles: list[str]) -> tuple[str, str] | tuple[None, None]:
+def find_exact(indices: list[tuple[str, str]], exact: str) -> str | None:
     for t, name in indices:
-        nm = name.upper().replace(" ", "")
-        if all(n.upper() in nm for n in needles):
-            return t, name
-    return None, None
+        if name.strip() == exact:
+            return t
+    return None
 
 
 def annual_returns(ticker: str) -> dict[int, float]:
@@ -78,38 +76,40 @@ def annual_returns(ticker: str) -> dict[int, float]:
         except (KeyError, ValueError, TypeError):
             continue
         if v > 0:
-            closes[idx.year] = v  # 오름차순 → 같은 해는 마지막(연말) 값이 남음
+            closes[idx.year] = v  # 오름차순 → 같은 해 마지막(연말)이 남음
     years = sorted(closes)
     return {years[i]: round((closes[years[i]] / closes[years[i - 1]] - 1) * 100, 2)
             for i in range(1, len(years))}
 
 
-def run(label: str, key: str, market: str, needles: list[str]) -> None:
+def run(label: str, key: str, market: str, exact: str) -> None:
     idx = list_indices(market)
     if not idx:
         print(f"// {label}: {market} 지수목록 비어있음 (로그인/네트워크 확인).")
         return
-    t, name = find_tr(idx, needles)
+    t = find_exact(idx, exact)
     if not t:
-        print(f"// {label}: '{' '.join(needles)}' 못 찾음. {market} 가용 지수명 {len(idx)}개 ↓ (붙여주세요)")
+        print(f"// {label}: '{exact}' 정확매칭 실패. {market} 지수명 ↓ (붙여주세요)")
         print("//  " + " | ".join(n for _, n in idx))
         return
     try:
         rets = annual_returns(t)
     except Exception as e:
-        print(f"// {label}: 시세 조회 실패 ({name}, {t}): {type(e).__name__}: {e}")
+        print(f"// {label}: 시세 실패 ({exact}, {t}): {type(e).__name__}: {e}")
         return
     ys = sorted(rets)
     if not ys:
-        print(f"// {label}: 시세 비어있음 ({name}, {t}) — 로그인 확인.")
+        print(f"// {label}: 시세 비어있음 ({exact}, {t}) — 로그인 확인.")
         return
-    print(f"// {label}: {name} (ticker {t}), {ys[0]}~{ys[-1]}")
-    print(f"  // RETURN_YEARS.{key}\n  {key}: {ys},")
-    print(f"  // RETURNS.{key} (KRX 공식 TR, 배당 포함)\n  {key}: {[rets[y] for y in ys]},")
+    print(f"// {label}: {exact} (ticker {t}) — KRX 공식 *가격*수익률, {ys[0]}~{ys[-1]} ({len(ys)}년)")
+    print(f"  // RETURN_YEARS.{key}")
+    print(f"  {key}: {ys},")
+    print(f"  // RETURNS.{key} (가격수익률; 반영 시 배당 별도 처리)")
+    print(f"  {key}: {[rets[y] for y in ys]},")
     print()
 
 
 if __name__ == "__main__":
-    print(f"// KRX 공식 gross TR via pykrx, {START[:4]}~{END[:4]}. 반영 시 배당 가산(+1.8 등) 제거.\n")
-    run("KOSPI 200 TR", "ks", "KOSPI", ["200", "TR"])
-    run("KOSDAQ 150 TR", "kq", "KOSDAQ", ["150", "TR"])
+    print(f"// KRX 공식 가격지수 via pykrx, ~{END[:4]}. (TR은 무료 경로 부재 — DATA-SOURCES 참고)\n")
+    run("KOSPI 200", "ks", "KOSPI", "코스피 200")
+    run("KOSDAQ 150", "kq", "KOSDAQ", "코스닥 150")
