@@ -1,0 +1,59 @@
+.term {
+  position: relative;
+  border-bottom: 1px dotted var(--text-tertiary);
+  cursor: help;
+  outline: none;
+}
+.term:focus-visible {
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  transform: translateY(4px);
+  width: max-content;
+  max-width: min(260px, 78vw);
+  z-index: 20;
+  background: var(--text);
+  color: var(--bg-surface);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  word-break: keep-all;
+  padding: 9px 11px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+/* little arrow near the left edge, under the term */
+.bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 16px;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--text);
+}
+
+.term:hover .bubble,
+.term:focus .bubble,
+.term:focus-within .bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    transition: none;
+  }
+}

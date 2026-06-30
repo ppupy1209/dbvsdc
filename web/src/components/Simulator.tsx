@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from "react";
+import Term from "./Term";
 import {
   INDEX_COST,
   INDEX_KEYS,
@@ -127,19 +128,25 @@ export default function Simulator() {
     return arr;
   }, [r]);
 
-  const onMove = (e: ReactMouseEvent<SVGSVGElement>) => {
+  const setHoverFromClientX = (clientX: number) => {
     const svg = svgRef.current;
     if (!svg) return;
     const ctm = svg.getScreenCTM();
     if (!ctm) return;
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
+    pt.x = clientX;
+    pt.y = 0;
     const vbX = pt.matrixTransform(ctm.inverse()).x;
     let idx = Math.round(((vbX - PAD.l) / PLOT_W) * r.n);
     if (!Number.isFinite(idx)) return;
     idx = Math.max(0, Math.min(r.n, idx));
     setHover(idx);
+  };
+  const onMove = (e: ReactMouseEvent<SVGSVGElement>) => setHoverFromClientX(e.clientX);
+  // Touch support so the year-by-year tooltip works on mobile (no hover).
+  const onTouch = (e: ReactTouchEvent<SVGSVGElement>) => {
+    const t = e.touches[0];
+    if (t) setHoverFromClientX(t.clientX);
   };
 
   const diff = r.dcFinal - r.dbFinal;
@@ -217,7 +224,11 @@ export default function Simulator() {
             <div className={s.indexInfoHead}>{INDEX_LABELS[indices[0]]}</div>
             <p className={s.indexInfoDesc}>{INDEX_META[indices[0]].desc}</p>
             <div className={s.indexAvg}>
-              <span className={s.indexAvgLabel}>지수 연평균 수익률</span>
+              <span className={s.indexAvgLabel}>
+                <Term tip="전체 보유 기간의 기하평균 수익률(CAGR). 배당을 다시 투자한 '총수익(Total Return)' 기준이며, 단순 산술평균이 아닙니다. 비용 차감 전 지수 자체의 수익률입니다.">
+                  지수 연평균 수익률
+                </Term>
+              </span>
               <span className={s.indexAvgVal}>
                 연 {(cagrOf(indices[0], market) * 100).toFixed(1)}%
               </span>
@@ -226,7 +237,11 @@ export default function Simulator() {
               </span>
             </div>
             <div className={s.indexAvg}>
-              <span className={s.indexAvgLabel}>비용 차감(DC 적용)</span>
+              <span className={s.indexAvgLabel}>
+                <Term tip="명목 총보수가 아니라 실부담비용률(보수+매매·중개비 등)입니다. DC 위험자산(70%)의 추종 ETF에서 매년 빠지는 실제 비용으로, 지수 수익률에서 차감해 반영합니다.">
+                  비용 차감(DC 적용)
+                </Term>
+              </span>
               <span className={s.indexAvgVal}>
                 연 −{(INDEX_COST[indices[0]].realCost * 100).toFixed(2)}%
               </span>
@@ -280,7 +295,11 @@ export default function Simulator() {
         </div>
 
         <div className={s.row}>
-          <label className={s.rowLabel}>현재 연봉</label>
+          <label className={s.rowLabel}>
+            <Term tip="세전 연 임금총액(상여·수당 포함). DB의 평균임금과 DC 부담금이 모두 이 값을 기준으로 계산되므로, 상여를 뺀 기본급만 넣으면 두 금액이 함께 과소평가됩니다.">
+              현재 연봉
+            </Term>
+          </label>
           <input
             type="range"
             min={1000}
@@ -292,7 +311,11 @@ export default function Simulator() {
           <span className={s.rowVal}>{salary.toLocaleString()}만원</span>
         </div>
         <div className={s.row}>
-          <label className={s.rowLabel}>연봉 상승률</label>
+          <label className={s.rowLabel}>
+            <Term tip="매년 연봉이 오르는 비율. 정기 호봉·물가 반영분을 포함합니다. 보통 3~5%, 호봉제·승진이 잦으면 더 높습니다. 높을수록 DB가 유리해집니다.">
+              연봉 상승률
+            </Term>
+          </label>
           <input
             type="range"
             min={0}
@@ -347,7 +370,11 @@ export default function Simulator() {
       {breakeven !== null && indices[0] && (
         <div className={s.breakeven}>
           <div className={s.breakevenHead}>
-            <span className={s.breakevenLabel}>손익분기 수익률</span>
+            <span className={s.breakevenLabel}>
+              <Term tip="선택한 지수가 매년 이 수익률을 내면 DC의 최종 적립금이 DB와 같아지는 분기점입니다. 이보다 높으면 DC, 낮으면 DB가 유리합니다. (안전자산 30%·비용·연봉상승률을 반영한 값)">
+                손익분기 수익률
+              </Term>
+            </span>
             <span className={s.breakevenVal}>연 {(breakeven * 100).toFixed(1)}%</span>
           </div>
           <p className={s.breakevenDesc}>
@@ -427,6 +454,9 @@ export default function Simulator() {
             aria-label="연도별 DB와 DC 적립금 추이"
             onMouseMove={onMove}
             onMouseLeave={() => setHover(null)}
+            onTouchStart={onTouch}
+            onTouchMove={onTouch}
+            onTouchEnd={() => setHover(null)}
           >
             {yTicks.map((tv, i) => (
               <g key={`y${i}`}>
@@ -641,7 +671,12 @@ function TaxCard({
         <span>{formatMan(gross - lumpTax)}</span>
       </div>
       <div className={`${s.taxRow} ${s.taxRowSep}`}>
-        <span className={s.cAccent}>IRP 연금수령 세금 ({irpTaxRate})</span>
+        <span className={s.cAccent}>
+          <Term tip="퇴직급여를 IRP 계좌로 옮겨 만 55세 이후 연금으로 나눠 받는 방식. 일시금 대신 연금으로 받으면 이연퇴직소득세를 10년 이내 30%, 11년 이후 40% 덜 냅니다.">
+            IRP 연금수령
+          </Term>{" "}
+          세금 ({irpTaxRate})
+        </span>
         <span className={s.cAccent}>{formatMan(-irpTax)}</span>
       </div>
       <div className={s.taxRow} style={{ marginBottom: 0 }}>

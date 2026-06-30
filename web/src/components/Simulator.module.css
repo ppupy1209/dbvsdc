@@ -562,4 +562,16 @@
     grid-template-columns: 1fr 1fr;
     width: min(220px, 100%);
   }
+  /* tighten the slider rows so the value label never overflows on phones */
+  .row {
+    gap: 10px;
+  }
+  .rowLabel {
+    width: 84px;
+    font-size: 13px;
+  }
+  .rowVal {
+    min-width: 54px;
+    font-size: 13px;
+  }
 }
