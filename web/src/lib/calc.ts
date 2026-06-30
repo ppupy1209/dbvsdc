@@ -1,7 +1,7 @@
 // DB/DC retirement pension simulation model.
 // Amount unit is man-won. Market returns are gross total-return approximations.
 
-import { availableReturnYears, costForIndices, IndexKey, MarketData, yearsForIndex } from "./indexData";
+import { availableReturnYears, costForIndices, isUsdIndex, IndexKey, MarketData, yearsForIndex } from "./indexData";
 
 export type Mode = "back" | "fwd";
 export type FutureScenario = "average" | "worst";
@@ -12,6 +12,9 @@ export const RETIRE_LOCAL_TAX_RATE = 0.1;
 
 export interface SimOptions {
   futureScenario?: FutureScenario;
+  // Backtest only: convert USD-index returns to KRW using historical USD/KRW
+  // moves (unhedged ETF). Future scenarios stay in local currency.
+  krwConvert?: boolean;
 }
 
 export interface SimResult {
@@ -93,18 +96,41 @@ function netBlendReturn(indexGrossReturn: number, dep: number, riskyCost = 0): n
   return 0.3 * dep + 0.7 * (indexGrossReturn - riskyCost);
 }
 
-function returnForYear(data: MarketData, key: IndexKey, year: number): number | null {
+// Safe-asset rate for a calendar year: per-year history if present, else the
+// single forward/fallback rate.
+function depositForYear(data: MarketData, year: number): number {
+  return data.depositRateByYear?.[year] ?? data.depositRate;
+}
+
+function returnForYear(
+  data: MarketData,
+  key: IndexKey,
+  year: number,
+  krwConvert: boolean
+): number | null {
   const years = yearsForIndex(data, key);
   const idx = years.indexOf(year);
   if (idx < 0) return null;
   const value = data.returns[key]?.[idx];
-  return typeof value === "number" ? value / 100 : null;
+  if (typeof value !== "number") return null;
+  let r = value / 100;
+  if (krwConvert && isUsdIndex(key)) {
+    const fx = data.fxUsdKrwByYear?.[year] ?? 0;
+    r = (1 + r) * (1 + fx) - 1; // local return compounded with the USD/KRW move
+  }
+  return r;
 }
 
-function indexGrossReturn(data: MarketData, indices: IndexKey[], year: number, dep: number): number {
+function indexGrossReturn(
+  data: MarketData,
+  indices: IndexKey[],
+  year: number,
+  dep: number,
+  krwConvert: boolean
+): number {
   if (!indices.length) return dep;
   const values = indices
-    .map((key) => returnForYear(data, key, year))
+    .map((key) => returnForYear(data, key, year, krwConvert))
     .filter((value): value is number => value !== null);
   if (!values.length) return dep;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -113,11 +139,14 @@ function indexGrossReturn(data: MarketData, indices: IndexKey[], year: number, d
 function historicalNetReturns(
   data: MarketData,
   indices: IndexKey[],
-  dep: number,
   years: number[],
-  riskyCost: number
+  riskyCost: number,
+  krwConvert: boolean
 ): number[] {
-  return years.map((year) => netBlendReturn(indexGrossReturn(data, indices, year, dep), dep, riskyCost));
+  return years.map((year) => {
+    const dep = depositForYear(data, year);
+    return netBlendReturn(indexGrossReturn(data, indices, year, dep, krwConvert), dep, riskyCost);
+  });
 }
 
 function terminalDcBalance(salaryMan: number, raise: number, rets: number[]): number {
@@ -172,12 +201,13 @@ function conservativeForwardReturns(
   const windowSize = Math.min(n, avail);
   let worstStart = Math.max(0, avail - windowSize);
   let worstYears = years.slice(worstStart, worstStart + windowSize);
-  let worstRets = historicalNetReturns(data, indices, dep, worstYears, riskyCost);
+  // Future scenarios stay in local currency (no FX-drift assumption).
+  let worstRets = historicalNetReturns(data, indices, worstYears, riskyCost, false);
   let worstBalance = terminalDcBalance(salaryMan, raise, worstRets);
 
   for (let start = 0; start <= avail - windowSize; start++) {
     const candidateYears = years.slice(start, start + windowSize);
-    const candidate = historicalNetReturns(data, indices, dep, candidateYears, riskyCost);
+    const candidate = historicalNetReturns(data, indices, candidateYears, riskyCost, false);
     const balance = terminalDcBalance(salaryMan, raise, candidate);
     if (balance < worstBalance) {
       worstBalance = balance;
@@ -192,6 +222,43 @@ function conservativeForwardReturns(
     scenarioStart: worstYears[0] ?? null,
     scenarioEnd: worstYears[worstYears.length - 1] ?? null,
   };
+}
+
+// The constant gross index return at which DC's terminal balance equals DB's,
+// holding the model's 30/70 blend, risky-sleeve cost, wage raise, and end-of-year
+// contributions fixed. This is the site's core "손익분기 수익률": above it DC wins,
+// below it DB wins. Returns a fraction (0.05 = 5%), or null if there is no
+// crossing within a sane band (e.g. raise so high DB always wins).
+export function breakevenIndexReturn(
+  salaryMan: number,
+  raisePct: number,
+  n: number,
+  indices: IndexKey[],
+  data: MarketData
+): number | null {
+  if (n <= 0) return null;
+  const raise = raisePct / 100;
+  const dep = data.depositRate;
+  const cost = costForIndices(indices);
+  const dbFinal = annualContribution(salaryMan, raise, n - 1) * n;
+  const dcAt = (g: number): number =>
+    terminalDcBalance(
+      salaryMan,
+      raise,
+      Array.from({ length: n }, () => netBlendReturn(g, dep, cost))
+    );
+
+  let lo = -0.95; // index down 95%
+  let hi = 3.0; // index up 300%
+  // DC balance is strictly increasing in the index return, so a sign change in
+  // (DC − DB) across [lo, hi] guarantees a unique bisected root.
+  if (dcAt(lo) > dbFinal || dcAt(hi) < dbFinal) return null;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (dcAt(mid) < dbFinal) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
 }
 
 export function simulate(
@@ -220,7 +287,7 @@ export function simulate(
     const selectedYears = years.slice(Math.max(0, years.length - n));
     calendarStart = selectedYears[0] ?? null;
     rets = selectedYears.length
-      ? historicalNetReturns(data, indices, dep, selectedYears, riskyCost)
+      ? historicalNetReturns(data, indices, selectedYears, riskyCost, opts.krwConvert ?? false)
       : Array.from({ length: n }, () => netBlendReturn(dep, dep));
   } else if (futureScenario === "average") {
     // Average scenario repeats the long-run CAGR, so it can project the full

@@ -210,6 +210,42 @@
   border-radius: 999px;
 }
 
+/* 원화 환산 토글 (백테스트·USD 지수 한정) */
+.fxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+}
+.fxCheck {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.fxText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fxTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fxHint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -314,6 +350,99 @@
 }
 .hl {
   font-weight: 500;
+}
+
+.statsNote {
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+}
+
+/* 손익분기 수익률 — 이 서비스의 정체성 메시지 */
+.breakeven {
+  background: var(--accent-bg);
+  border: 0.5px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.2rem;
+  margin: 0 0 1.5rem;
+}
+.breakevenHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.breakevenLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.breakevenVal {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent-text);
+}
+.breakevenDesc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.breakevenDesc b {
+  font-weight: 600;
+}
+
+/* 미래 평균 시나리오 경고 — 확정수익 오인 방지 */
+.avgWarn {
+  background: color-mix(in srgb, var(--warning) 12%, var(--bg-surface));
+  border: 0.5px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.avgWarn b {
+  font-weight: 600;
+  color: var(--warning);
+}
+
+/* 세후 결론 요약 */
+.afterTaxVerdict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bg-surface);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 1.25rem;
+}
+.afterTaxLabel {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+.afterTaxText {
+  font-size: 15px;
+  font-weight: 500;
+}
+.afterTaxText b {
+  font-weight: 600;
+}
+
+.inlineDisclaimer {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+  margin: 0 0 0.5rem;
+}
+.inlineDisclaimer b {
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .legendRow {

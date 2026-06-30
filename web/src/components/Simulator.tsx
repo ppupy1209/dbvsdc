@@ -10,9 +10,10 @@ import {
   IndexKey,
   SAMPLE_MARKET,
   availableReturnYears,
+  isUsdIndex,
   yearsForIndex,
 } from "@/lib/indexData";
-import { cagrOf, formatMan, FutureScenario, Mode, simulate } from "@/lib/calc";
+import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -31,6 +32,7 @@ export default function Simulator() {
   const [period, setPeriod] = useState(15);
   const [salary, setSalary] = useState(4000);
   const [raise, setRaise] = useState(3);
+  const [krwConvert, setKrwConvert] = useState(false);
   const [market, setMarket] = useState(SAMPLE_MARKET);
   const [source, setSource] = useState<DataSource>("sample");
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
@@ -57,10 +59,22 @@ export default function Simulator() {
 
   const effectivePeriod = Math.min(period, maxPeriod);
 
+  // 원화 환산은 백테스트 + USD 지수에서만 의미가 있다.
+  const usdSelected = indices[0] ? isUsdIndex(indices[0]) : false;
+  const krwActive = mode === "back" && usdSelected && krwConvert;
   const r = useMemo(
-    () => simulate(salary, raise, effectivePeriod, indices, mode, market, { futureScenario }),
-    [salary, raise, effectivePeriod, indices, mode, market, futureScenario]
+    () => simulate(salary, raise, effectivePeriod, indices, mode, market, { futureScenario, krwConvert: krwActive }),
+    [salary, raise, effectivePeriod, indices, mode, market, futureScenario, krwActive]
   );
+
+  // 손익분기 수익률: 선택 지수가 매년 이 수익률(총수익, 비용 차감 전)을 내면 DC = DB.
+  const breakeven = useMemo(
+    () => breakevenIndexReturn(salary, raise, r.n, indices, market),
+    [salary, raise, r.n, indices, market]
+  );
+  const indexCagr = indices[0] ? cagrOf(indices[0], market) : null;
+  // 세후(IRP 연금수령) 실수령 차이 = DC 세후 − DB 세후.
+  const afterTaxDcDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
@@ -203,12 +217,12 @@ export default function Simulator() {
             <div className={s.indexInfoHead}>{INDEX_LABELS[indices[0]]}</div>
             <p className={s.indexInfoDesc}>{INDEX_META[indices[0]].desc}</p>
             <div className={s.indexAvg}>
-              <span className={s.indexAvgLabel}>연평균 수익률</span>
+              <span className={s.indexAvgLabel}>지수 연평균 수익률</span>
               <span className={s.indexAvgVal}>
                 연 {(cagrOf(indices[0], market) * 100).toFixed(1)}%
               </span>
               <span className={s.indexAvgNote}>
-                {selectedYears[0]}~{selectedYears[selectedYears.length - 1]} · 배당 재투자 포함
+                {selectedYears[0]}~{selectedYears[selectedYears.length - 1]} · 배당 재투자 포함 · 비용 차감 전
               </span>
             </div>
             <div className={s.indexAvg}>
@@ -222,7 +236,7 @@ export default function Simulator() {
               </span>
             </div>
             <div className={s.indexCompanies}>
-              <span className={s.indexCompaniesLabel}>주요 기업</span>
+              <span className={s.indexCompaniesLabel}>구성 종목 예시</span>
               {INDEX_META[indices[0]].companies.map((c) => (
                 <span key={c} className={s.companyTag}>
                   {c}
@@ -230,6 +244,24 @@ export default function Simulator() {
               ))}
             </div>
           </div>
+        )}
+
+        {mode === "back" && usdSelected && (
+          <label className={s.fxRow}>
+            <input
+              type="checkbox"
+              className={s.fxCheck}
+              checked={krwConvert}
+              onChange={(e) => setKrwConvert(e.target.checked)}
+            />
+            <span className={s.fxText}>
+              <span className={s.fxTitle}>원화 환산</span>
+              <span className={s.fxHint}>
+                환노출 ETF 기준 — USD 지수 수익률에 과거 원/달러 변동을 반영합니다.
+                {krwConvert ? " 환율은 추정치이며 환헤지형은 결과가 달라집니다." : " (끄면 USD/현지통화 기준)"}
+              </span>
+            </span>
+          </label>
         )}
 
         <div className={s.row}>
@@ -286,7 +318,7 @@ export default function Simulator() {
         <div className={s.statsLine}>
           {mode === "back" ? (
             <>
-              연평균 수익률{" "}
+              내 포트폴리오 연평균{" "}
               <span className={`${s.hl} ${s.cAccent}`}>
                 연 {(r.cagr * 100).toFixed(1)}%
               </span>{" "}
@@ -294,10 +326,11 @@ export default function Simulator() {
               <span className={`${s.hl} ${s.cDanger}`}>
                 {(r.worst * 100).toFixed(1)}%
               </span>
+              <span className={s.statsNote}> (안전 30 + 위험 70, 비용 반영)</span>
             </>
           ) : (
             <>
-              {futureScenario === "average" ? "평균 시나리오 연평균 수익률" : "최악 시나리오 연평균 수익률"}{" "}
+              {futureScenario === "average" ? "평균 시나리오 · 내 포트폴리오 연평균" : "최악 시나리오 · 내 포트폴리오 연평균"}{" "}
               <span className={`${s.hl} ${s.cAccent}`}>
                 {(r.cagr * 100).toFixed(1)}%
               </span>{" "}
@@ -310,6 +343,26 @@ export default function Simulator() {
           )}
         </div>
       </div>
+
+      {breakeven !== null && indices[0] && (
+        <div className={s.breakeven}>
+          <div className={s.breakevenHead}>
+            <span className={s.breakevenLabel}>손익분기 수익률</span>
+            <span className={s.breakevenVal}>연 {(breakeven * 100).toFixed(1)}%</span>
+          </div>
+          <p className={s.breakevenDesc}>
+            {INDEX_LABELS[indices[0]]}가 매년 이보다 <b className={s.cAccent}>높으면 DC</b>,{" "}
+            <b>낮으면 DB</b>가 유리합니다.
+            {indexCagr !== null && (
+              <>
+                {" "}
+                이 지수의 과거 연평균은 <b>연 {(indexCagr * 100).toFixed(1)}%</b>였습니다
+                {indexCagr > breakeven ? " (과거 기준 DC 우위)" : " (과거 기준 DB 우위)"}.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className={`${s.chartShell} ${mode === "fwd" ? s.chartShellWithAside : ""}`}>
         {mode === "fwd" && (
@@ -357,6 +410,14 @@ export default function Simulator() {
               </span>
             </div>
           </div>
+
+          {mode === "fwd" && futureScenario === "average" && (
+            <div className={s.avgWarn}>
+              이 선은 <b>매년 같은 수익률</b>이라는 가정일 뿐입니다. 실제 수익은 해마다 크게
+              오르내리고 손실 구간도 생깁니다 — <b>확정 수익이 아닙니다.</b> ‘최악’ 시나리오도 꼭
+              함께 확인하세요.
+            </div>
+          )}
 
           <svg
             ref={svgRef}
@@ -522,6 +583,29 @@ export default function Simulator() {
         IRP 연금수령 세금은 <b>{r.irpPayoutYears}년 균등수령</b>을 가정합니다.
         10년차까지 이연퇴직소득세의 70%, 11년차부터 60%를 반영했습니다. DC형 기준 약 <b>{formatMan(r.dcLumpTax - r.dcIrpTax)}</b> 절세.
       </div>
+
+      <div className={s.afterTaxVerdict}>
+        <span className={s.afterTaxLabel}>세후 결론 (IRP 연금수령 기준)</span>
+        <span className={s.afterTaxText}>
+          {Math.abs(afterTaxDcDiff) / Math.max(r.dbFinal, r.dcFinal, 1) < 0.005 ? (
+            <>DB ≈ DC 실수령 비슷</>
+          ) : afterTaxDcDiff > 0 ? (
+            <>
+              <b className={s.cAccent}>DC가 {formatMan(Math.abs(afterTaxDcDiff))}</b> 더 많음
+            </>
+          ) : (
+            <>
+              <b>DB가 {formatMan(Math.abs(afterTaxDcDiff))}</b> 더 많음
+            </>
+          )}
+        </span>
+      </div>
+
+      <p className={s.inlineDisclaimer}>
+        본 결과는 입력값과 과거 데이터에 기반한 <b>정보 제공용 추정</b>이며, 특정 상품·제도 가입을
+        권유하지 않습니다. 과거 수익률은 미래를 보장하지 않으며, 개인 상황에 따라 결과가 달라질 수
+        있습니다. 투자·세무 판단은 전문가와 상담하세요.
+      </p>
     </div>
   );
 }

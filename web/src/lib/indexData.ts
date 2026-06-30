@@ -79,6 +79,112 @@ export function costForIndices(indices: IndexKey[]): number {
   return indices.reduce((sum, k) => sum + (INDEX_COST[k]?.realCost ?? 0), 0) / indices.length;
 }
 
+// ---------------------------------------------------------------------------
+// Year-by-year safe-asset deposit rate (30% sleeve).
+// A flat 3% across all history badly distorts the backtest — Korean 1-year time
+// deposits paid 10%+ in 1998 and ~1% in 2020. These are APPROXIMATE annual
+// averages (예금은행 정기예금, 신규취급액 기준), curated like the dividend/cost
+// approximations and pending verification against the official BOK ECOS series.
+// Future mode keeps the single forward-looking DEPOSIT_RATE (2026 assumption).
+// ⚠️ 추정·검증 필요 (공식: 한국은행 ECOS 예금은행 정기예금 금리).
+export const DEPOSIT_RATE_BY_YEAR: Record<number, number> = {
+  1995: 0.089, 1996: 0.075, 1997: 0.11, 1998: 0.135, 1999: 0.079, 2000: 0.072,
+  2001: 0.057, 2002: 0.048, 2003: 0.042, 2004: 0.038, 2005: 0.036, 2006: 0.045,
+  2007: 0.051, 2008: 0.058, 2009: 0.033, 2010: 0.034, 2011: 0.039, 2012: 0.035,
+  2013: 0.027, 2014: 0.025, 2015: 0.017, 2016: 0.015, 2017: 0.017, 2018: 0.02,
+  2019: 0.018, 2020: 0.011, 2021: 0.013, 2022: 0.033, 2023: 0.038, 2024: 0.035,
+  2025: 0.029,
+};
+
+// ---------------------------------------------------------------------------
+// Currency denomination per index, and an approximate annual USD/KRW change.
+// Overseas indices are quoted in USD; a Korean investor in an UNHEDGED ETF earns
+// the USD index return PLUS the USD/KRW move. Applying this only matters for the
+// backtest (real historical FX); future mode assumes no FX drift. Values are the
+// annual % change of the year-end USD/KRW rate, APPROXIMATE and pending
+// verification (공식: 한국은행 ECOS 원/달러 종가).
+// ⚠️ 추정·검증 필요.
+export const CURRENCY: Record<IndexKey, "USD" | "KRW"> = {
+  sp: "USD",
+  nq: "USD",
+  dj: "USD",
+  ks: "KRW",
+  kq: "KRW",
+};
+
+export function isUsdIndex(key: IndexKey): boolean {
+  return CURRENCY[key] === "USD";
+}
+
+export const USDKRW_RETURN_BY_YEAR: Record<number, number> = {
+  1995: -0.018, 1996: 0.09, 1997: 1.008, 1998: -0.29, 1999: -0.055, 2000: 0.112,
+  2001: 0.039, 2002: -0.097, 2003: 0.01, 2004: -0.136, 2005: -0.023, 2006: -0.08,
+  2007: 0.007, 2008: 0.346, 2009: -0.075, 2010: -0.026, 2011: 0.015, 2012: -0.07,
+  2013: -0.015, 2014: 0.042, 2015: 0.066, 2016: 0.031, 2017: -0.113, 2018: 0.042,
+  2019: 0.036, 2020: -0.061, 2021: 0.095, 2022: 0.064, 2023: 0.02, 2024: 0.141,
+  2025: -0.062,
+};
+
+// ---------------------------------------------------------------------------
+// Data integrity validation.
+// The class of bug that silently corrupts a backtest is *structural*: a returns
+// array drifting out of sync with its year axis (a dropped/extra cell, a column
+// shift). validateMarketData catches that hard. It also surfaces extreme yearly
+// values as soft warnings — NOT errors — because real markets do post extreme
+// years (KOSPI 200 +92% in 2025's semiconductor rally, NASDAQ +102% in 1999).
+// A hard reject on outliers would throw away correct data, so we only warn.
+// ---------------------------------------------------------------------------
+export interface DataIssue {
+  level: "error" | "warn";
+  key: IndexKey;
+  message: string;
+}
+
+// Returns outside this band are flagged for a human to eyeball, not rejected.
+const SANITY_RETURN_PCT = { min: -60, max: 110 };
+
+export function validateMarketData(data: MarketData): DataIssue[] {
+  const issues: DataIssue[] = [];
+  for (const key of INDEX_KEYS) {
+    const years = data.returnYears?.[key] ?? data.years;
+    const returns = data.returns[key] ?? [];
+
+    if (returns.length !== years.length) {
+      issues.push({
+        level: "error",
+        key,
+        message: `returns(${returns.length}) and years(${years.length}) length mismatch — backtest axis is misaligned`,
+      });
+    }
+
+    for (let i = 0; i < returns.length; i++) {
+      const v = returns[i];
+      const year = years[i];
+      if (typeof v !== "number" || !Number.isFinite(v)) {
+        issues.push({ level: "error", key, message: `non-numeric return at ${year ?? `idx ${i}`}` });
+      } else if (v < SANITY_RETURN_PCT.min || v > SANITY_RETURN_PCT.max) {
+        issues.push({
+          level: "warn",
+          key,
+          message: `extreme return ${v}% at ${year ?? `idx ${i}`} — verify against official source`,
+        });
+      }
+    }
+
+    // Year axis must be strictly ascending so slicing the last N years is correct.
+    for (let i = 1; i < years.length; i++) {
+      if (years[i] <= years[i - 1]) {
+        issues.push({
+          level: "error",
+          key,
+          message: `years not strictly ascending around ${years[i - 1]}→${years[i]}`,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
 export function yearsForIndex(data: MarketData, key: IndexKey): number[] {
   return data.returnYears?.[key] ?? data.years;
 }
@@ -139,7 +245,9 @@ export interface MarketData {
   years: number[];
   returns: Record<IndexKey, number[]>; // array length follows returnYears[key] when provided, unit: %
   returnYears?: Partial<Record<IndexKey, number[]>>;
-  depositRate: number; // safe-asset rate for the 30% sleeve, e.g. 0.03
+  depositRate: number; // forward/fallback safe-asset rate for the 30% sleeve, e.g. 0.03
+  depositRateByYear?: Record<number, number>; // per-year safe rate used in backtests
+  fxUsdKrwByYear?: Record<number, number>; // annual USD/KRW change for KRW conversion
   returnBasis?: "gross_total_return" | "price_return";
   currency?: "local";
   dividendIncluded?: boolean;
@@ -152,6 +260,8 @@ export const SAMPLE_MARKET: MarketData = {
   returns: RETURNS,
   returnYears: RETURN_YEARS,
   depositRate: 0.03,
+  depositRateByYear: DEPOSIT_RATE_BY_YEAR,
+  fxUsdKrwByYear: USDKRW_RETURN_BY_YEAR,
   returnBasis: "gross_total_return",
   currency: "local",
   dividendIncluded: true,

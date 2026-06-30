@@ -17,6 +17,8 @@ export function GET() {
     expenseIncluded: SAMPLE_MARKET.expenseIncluded,
     years: SAMPLE_MARKET.years,
     depositRate: SAMPLE_MARKET.depositRate,
+    depositRateByYear: SAMPLE_MARKET.depositRateByYear,
+    fxUsdKrwByYear: SAMPLE_MARKET.fxUsdKrwByYear,
     returns: SAMPLE_MARKET.returns,
     returnYears: SAMPLE_MARKET.returnYears,
   });
