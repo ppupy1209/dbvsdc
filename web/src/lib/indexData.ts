@@ -23,8 +23,8 @@ export const RETURN_YEARS: Record<IndexKey, number[]> = {
   sp: YEARS,
   nq: YEARS,
   dj: YEARS,
-  ks: [2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
-  kq: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+  ks: [1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+  kq: [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
 };
 
 // Unit: percent. Arrays align with RETURN_YEARS for each index key.
@@ -36,11 +36,15 @@ export const RETURNS: Record<IndexKey, number[]> = {
   nq: [43.34, 43.34, 21.43, 86.11, 102.75, -36.04, -31.85, -36.78, 49.92, 11.24, 2.29, 7.59, 19.47, -41.09, 54.34, 20.02, 3.5, 17.62, 35.79, 18.74, 9.23, 6.69, 32.32, -0.24, 38.76, 48.38, 27.43, -32.17, 54.61, 25.68, 20.97],
   // Dow Jones 30 annual price return plus average dividend-yield approximation.
   dj: [35.55, 28.11, 24.74, 18.2, 27.32, -4.07, -5, -14.66, 27.42, 5.25, 1.49, 18.39, 8.53, -31.74, 20.92, 13.12, 7.63, 9.36, 28.6, 9.62, -0.13, 15.52, 27.18, -3.53, 24.44, 9.35, 20.83, -6.68, 15.8, 14.98, 15.07],
-  // KOSPI 200 annual price return plus 1.8%p average dividend-yield approximation.
-  // 2003-2009 price returns from 1stock1.com (cross-checked: 2010 매치); 1995-2002 미확보(KRX 수동 필요).
-  ks: [33.53, 11.34, 55.75, 6.29, 31.94, -37.54, 53.4, 24.03, -10.41, 12.65, 1.92, -5.84, 0.3, 9.97, 26.7, -17.53, 13.93, 34.32, 3.06, -24.35, 24.78, -9.42, 92.47],
-  // KOSDAQ 150 proxy: KODEX KOSDAQ150 ETF adjusted-close return.
-  kq: [-14.62, 53.8, -16.95, -10.62, 50.22, -1.57, -35.66, 45.18, -19.0, 37.37],
+  // KOSPI 200: KRX official price index (코스피 200, ticker 1028, pykrx) + 1.8%p
+  // average dividend approximation. 1991~2025; KRX gross TR is not publicly
+  // available so price + avg dividend is retained. 2003~2025 cross-checked to
+  // match the prior 1stock1 series exactly. (2026 dropped: partial year.)
+  ks: [-8.62, 10.34, 30.93, 19.81, -10.09, -30.28, -35.87, 55.18, 102.02, -49.48, 39.08, -6.36, 33.53, 11.34, 55.75, 6.29, 31.94, -37.54, 53.4, 24.03, -10.41, 12.65, 1.92, -5.84, 0.3, 9.97, 26.7, -17.53, 13.93, 34.32, 3.06, -24.35, 24.78, -9.42, 92.47],
+  // KOSDAQ 150: KRX official price index (코스닥 150, ticker 2203, pykrx) + 0.8%p
+  // average dividend approximation. 2011~2025 (index base 2010-01-04). Replaces
+  // the earlier KODEX ETF adjusted-close proxy with the official index.
+  kq: [-2.43, -8.05, -1.96, 5.31, 23.27, -13.75, 51.83, -16.71, -10.92, 49.65, 0.26, -36.36, 46.29, -18.12, 37.76],
 };
 
 // Legacy helper for APIs that still return price returns. SAMPLE_MARKET.returns already include these yields.
@@ -49,7 +53,7 @@ export const DIVIDEND_YIELD: Record<IndexKey, number> = {
   nq: 0.8,
   dj: 2.1,
   ks: 1.8,
-  kq: 0,
+  kq: 0.8,
 };
 
 export const INDEX_KEYS: IndexKey[] = ["sp", "nq", "dj", "ks", "kq"];
@@ -90,7 +94,10 @@ export function costForIndices(indices: IndexKey[]): number {
 // 출처: World Bank FR.INR.DPST (연평균). BOK ECOS 정기예금(신규취급액) 종가 기준으로의
 // 정밀 교체는 잔여 과제. 1995·2025만 추정.
 export const DEPOSIT_RATE_BY_YEAR: Record<number, number> = {
-  1995: 0.088, // ⚠️ 추정 (World Bank 미발표)
+  // 1991~1995: ⚠️ 추정 (World Bank 미발표; 1990년대 초 한국 정기예금 ~10%대).
+  // ks가 1991~로 확장돼 최악 시나리오 윈도우가 이 구간을 쓸 수 있어 채움.
+  1991: 0.1, 1992: 0.1, 1993: 0.086, 1994: 0.085,
+  1995: 0.088,
   1996: 0.1011, 1997: 0.1081, 1998: 0.1329, 1999: 0.0795, 2000: 0.0794,
   2001: 0.0579, 2002: 0.0495, 2003: 0.0425, 2004: 0.0387, 2005: 0.0372,
   2006: 0.045, 2007: 0.0517, 2008: 0.0587, 2009: 0.0348, 2010: 0.0386,

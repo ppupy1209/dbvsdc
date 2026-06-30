@@ -12,9 +12,9 @@ export default function Footer() {
           </li>
           <li>
             지수 수익률은 <b>배당 재투자 포함(총수익)</b> 기준입니다. S&amp;P500은 연간
-            총수익 실측, NASDAQ 100·Dow Jones 30은 가격수익률 + 평균 배당, KOSPI 200은
-            가격수익률 + 평균 배당 근사, KOSDAQ 150은 KODEX KOSDAQ 150 ETF 조정종가
-            프록시입니다.
+            총수익 실측, NASDAQ 100·Dow Jones 30은 가격수익률 + 평균 배당, KOSPI 200·KOSDAQ
+            150은 <b>KRX 공식 가격지수</b>(정보데이터시스템) + 평균 배당 근사입니다(KRX gross
+            TR은 공개 미제공).
           </li>
           <li>
             DC 위험자산(70%)에는 지수별 대표 ETF의 <b>실부담비용</b>(보수+매매·중개비 등,
