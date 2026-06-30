@@ -76,26 +76,18 @@ def find_index(searches: list[str]) -> list[dict]:
     return []
 
 
-def list_all_indices() -> None:
-    """파인더가 안 되면 전체지수 목록에서 TR 지수의 코드를 찾도록 덤프(백업 진단)."""
-    print("// [백업] 전체지수 목록(MDCSTAT00101)에서 'TR' 포함 지수 탐색 ↓")
-    for mid in ["01", "02", "03", "04", "05"]:
-        j = post({
-            "bld": "dbms/MDC/STAT/standard/MDCSTAT00101",
-            "locale": "ko_KR",
-            "idxIndMidclssCd": mid,
-            "trdDd": "20251230",
-            "share": "2",
-            "money": "3",
-            "csvxls_isNo": "false",
-        })
-        rows = j.get("output") or j.get("block1") or []
-        if not rows:
-            continue
-        trs = [r for r in rows if "TR" in json.dumps(r, ensure_ascii=False)]
-        print(f"// midclss={mid}: 총 {len(rows)}건, TR 포함 {len(trs)}건. 첫 행 키={list(rows[0].keys())}")
-        for r in trs[:8]:
-            print("//  TR行:", json.dumps(r, ensure_ascii=False))
+TR_HINTS = ["TR", "총수익", "토탈", "토털", "TOTALRETURN"]
+
+
+def pick_index(cands: list[dict], base: str) -> dict | None:
+    for c in cands:  # prefer a TR / 총수익 variant
+        nm = (c.get("codeName") or "").upper().replace(" ", "")
+        if any(h.upper() in nm for h in TR_HINTS):
+            return c
+    for c in cands:  # else the exact base index (validates the series endpoint)
+        if c.get("codeName") == base:
+            return c
+    return None
 
 
 def series(full_code: str, short_code: str) -> list[dict]:
@@ -137,42 +129,39 @@ def annual_returns(rows: list[dict]) -> dict[int, float]:
     }
 
 
-def run(label: str, key: str, searches: list[str], exact: str) -> None:
+def run(label: str, key: str, searches: list[str], base: str) -> None:
     cands = find_index(searches)
     if not cands:
         print(f"// {label}: 파인더 결과 비어있음.")
         return
-    pick = (
-        next((c for c in cands if c.get("codeName") == exact), None)
-        or next((c for c in cands if exact.replace(" ", "") in (c.get("codeName") or "").replace(" ", "")), None)
-    )
+    # TR이 한글명일 수 있어 전체 변형명을 본다.
+    print(f"// {label}: finder {len(cands)}건 — 전체 이름 ↓")
+    print("//  " + " | ".join((c.get("codeName") or "?") for c in cands))
+    pick = pick_index(cands, base)
     if not pick:
-        print(f"// {label}: '{exact}' 못 찾음. 파인더 후보 ↓ (이걸 붙여주세요)")
-        print("//", json.dumps(cands, ensure_ascii=False)[:900])
+        print(f"// {label}: TR/총수익 변형도, base '{base}'도 못 찾음.")
         return
+    is_tr = any(h.upper() in (pick.get("codeName") or "").upper().replace(" ", "") for h in TR_HINTS)
     full, short = pick.get("full_code"), pick.get("short_code")
     rows = series(full, short)
     if not rows:
-        print(f"// {label}: 시세 비어있음. 선택된 지수 정보 ↓ (이걸 붙여주세요)")
-        print("//", json.dumps(pick, ensure_ascii=False))
+        print(f"// {label}: 시세 비어있음. pick={json.dumps(pick, ensure_ascii=False)}")
         return
+    print(f"// {label}: 시세 OK ({pick.get('codeName')}, full={full}, short={short}), "
+          f"{'TR✅' if is_tr else 'PRICE(가격지수) — TR 미발견 시 폴백'}; 첫 행 키={list(rows[0].keys())}")
+    print("//  첫 행:", json.dumps(rows[0], ensure_ascii=False))
     rets = annual_returns(rows)
     ys = sorted(rets)
     if not ys:
-        print(f"// {label}: 수익률 계산 실패. 시세 첫 행 ↓ (이걸 붙여주세요)")
-        print("//", json.dumps(rows[0], ensure_ascii=False))
+        print(f"// {label}: 수익률 계산 실패(필드명 확인). 위 첫 행 참고.")
         return
-    print(f"// {label}: {pick.get('codeName')} (full={full}, short={short}), {ys[0]}~{ys[-1]}")
-    print(f"  // RETURN_YEARS.{key}")
-    print(f"  {key}: {ys},")
-    print(f"  // RETURNS.{key} (배당 포함 TR)")
-    print(f"  {key}: {[rets[y] for y in ys]},")
+    print(f"  // RETURN_YEARS.{key}\n  {key}: {ys},")
+    print(f"  // RETURNS.{key} ({pick.get('codeName')})\n  {key}: {[rets[y] for y in ys]},")
     print()
 
 
 if __name__ == "__main__":
     print("// KRX 공식 gross TR (requests 직접 호출). 반영 시 indexData의 배당 가산(+1.8 등) 제거.\n")
     prime()
-    run("KOSPI 200 TR", "ks", ["코스피 200", "코스피", "200"], "코스피 200 TR")
-    run("KOSDAQ 150 TR", "kq", ["코스닥 150", "코스닥", "150"], "코스닥 150 TR")
-    list_all_indices()
+    run("KOSPI 200 TR", "ks", ["코스피 200", "코스피", "200"], "코스피 200")
+    run("KOSDAQ 150 TR", "kq", ["코스닥 150", "코스닥", "150"], "코스닥 150")
