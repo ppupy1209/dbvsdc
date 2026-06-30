@@ -1,167 +1,115 @@
 #!/usr/bin/env python3
 """
-KRX 공식 gross TR (코스피 200 TR · 코스닥 150 TR) 직접 수집 — pykrx 불필요.
+KRX 공식 gross TR (코스피 200 TR · 코스닥 150 TR) — pykrx + KRX 로그인.
 
-WHY NOT pykrx
-  최근 KRX 포털 변경으로 일부 pykrx 버전이 KRX 회원 로그인(KRX_ID/KRX_PW)을
-  요구하고, Python 3.14에서 깨진다. 여기서는 KRX의 공개 JSON 엔드포인트를
-  requests로 직접 호출한다. KRX가 막는 건 로그인이 아니라 '헤더 없는 요청'이라,
-  올바른 Referer/User-Agent만 보내면 로그인 없이 받아진다(브라우저 단순 접근은 403).
+배경: KRX가 지수 시세 데이터를 로그인 뒤로 옮겨, 인증 없이는 시세 엔드포인트가
+LOGOUT(HTTP 400)만 반환한다(requests 직접호출로 확인 완료). 공개 자동완성
+파인더에는 TR 지수 자체가 없었다. 따라서 KRX 회원 로그인이 필요하다.
 
-RUN (네트워크 되는 PC):
-  pip install requests
+준비 (최초 1회)
+  1. https://data.krx.co.kr 회원가입(무료).
+  2. 환경변수 설정 — PowerShell:
+       $env:KRX_ID = "아이디"
+       $env:KRX_PW = "비밀번호"
+     (영구: setx KRX_ID "아이디" ; setx KRX_PW "비밀번호"  → 새 터미널부터 적용)
+  3. pip install pykrx
+     ⚠️ Python 3.11~3.12 권장. 3.14에서 pandas/pykrx가 깨지면, 3.12로 가상환경:
+        py -3.12 -m venv .venv ; .venv\\Scripts\\activate ; pip install pykrx
+
+실행
   python web/scripts/fetch-krx-tr.py
 
-OUTPUT
-  성공: RETURNS.ks / RETURNS.kq (연간 %) + 연도 배열 → indexData.ts에 붙여넣기.
-        TR엔 배당이 이미 포함 → DIVIDEND_YIELD.ks 1.8→0, kq 프록시 표기 제거.
-  실패: 진단(파인더 결과 / 응답 원문)을 출력하니 그 출력을 그대로 붙여주세요.
-        (KRX 필드명/코드 매핑이 바뀌었으면 그걸로 한 번에 고칠 수 있습니다.)
+출력
+  성공 → ks/kq 연간 수익률 배열. indexData.ts에 반영하고 배당 가산 제거
+         (DIVIDEND_YIELD.ks 1.8→0; kq ETF 프록시 표기 제거 — TR엔 배당 포함).
+  TR 미발견 → 로그인해도 목록에 TR이 없으면 가용 지수명을 전부 출력하니,
+             그 출력을 붙여주세요(다음 판단: KRX OpenAPI 키 or 현 근사 유지).
 """
+import os
 import sys
-import json
+from datetime import datetime
+
+if not (os.environ.get("KRX_ID") and os.environ.get("KRX_PW")):
+    print("// ⚠️ KRX_ID / KRX_PW 환경변수 미설정 → KRX 로그인 데이터는 비어서 옵니다.")
+    print("//    PowerShell:  $env:KRX_ID='아이디'; $env:KRX_PW='비밀번호'  후 재실행\n")
 
 try:
-    import requests
+    from pykrx import stock
 except ImportError:
-    sys.exit("requests 미설치:  pip install requests")
+    sys.exit("pykrx 미설치:  pip install pykrx")
 
-BASE = "http://data.krx.co.kr"
-GETJSON = BASE + "/comm/bldAttendant/getJsonData.cmd"
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-    "Referer": BASE + "/contents/MDC/MDI/mdiLoader/index.cmd?menuId=MDC0201020103",
-    "X-Requested-With": "XMLHttpRequest",
-}
-
-S = requests.Session()
-S.headers.update(HEADERS)
+START = "20010101"
+END = f"{datetime.now().year - 1}1231"
+TODAY = datetime.now().strftime("%Y%m%d")
 
 
-def prime() -> None:
-    """KRX는 POST 전에 로더 페이지를 한 번 GET해 세션 쿠키를 받아야 JSON을 준다."""
+def list_indices(market: str) -> list[tuple[str, str]]:
     try:
-        S.get(HEADERS["Referer"], timeout=30)
+        tickers = stock.get_index_ticker_list(date=TODAY, market=market)
     except Exception as e:
-        print(f"// 세션 초기화 GET 실패: {e}")
-
-
-def post(data: dict) -> dict:
-    r = S.post(GETJSON, data=data, timeout=30)
-    try:
-        return r.json()
-    except Exception:
-        print(f"// 응답이 JSON이 아님 (HTTP {r.status_code}). 원문 앞부분 ↓ (이걸 붙여주세요)")
-        print("//", r.text[:400].replace("\n", " "))
-        return {}
-
-
-MKTSELS = ["ALL", "STK", "KSQ", "1", "2", ""]
-
-
-def find_index(searches: list[str]) -> list[dict]:
-    """finder_equidx는 mktsel/searchText 조합이 까다로워, 여러 조합을 쓸어본다."""
-    last = {}
-    for st in searches:
-        for mk in MKTSELS:
-            j = post({"bld": "dbms/comm/finder/finder_equidx", "mktsel": mk, "searchText": st})
-            last = j
-            rows = j.get("block1") or j.get("output") or []
-            if rows:
-                print(f"// [ok] finder 매칭: mktsel={mk!r}, searchText={st!r} → {len(rows)}건")
-                return rows
-    print(f"// [진단] finder 전 조합 실패. 마지막 응답 키={list(last.keys())}; 원문 ↓")
-    print("//", json.dumps(last, ensure_ascii=False)[:600])
-    return []
-
-
-TR_HINTS = ["TR", "총수익", "토탈", "토털", "TOTALRETURN"]
-
-
-def pick_index(cands: list[dict], base: str) -> dict | None:
-    for c in cands:  # prefer a TR / 총수익 variant
-        nm = (c.get("codeName") or "").upper().replace(" ", "")
-        if any(h.upper() in nm for h in TR_HINTS):
-            return c
-    for c in cands:  # else the exact base index (validates the series endpoint)
-        if c.get("codeName") == base:
-            return c
-    return None
-
-
-def series(full_code: str, short_code: str) -> list[dict]:
-    j = post({
-        "bld": "dbms/MDC/STAT/standard/MDCSTAT00301",
-        "locale": "ko_KR",
-        "indIdx": full_code,
-        "indIdx2": short_code,
-        "strtDd": "20010101",
-        "endDd": "20251231",
-        "share": "2",
-        "money": "3",
-        "csvxls_isNo": "false",
-    })
-    return j.get("output") or j.get("block1") or []
-
-
-def annual_returns(rows: list[dict]) -> dict[int, float]:
-    """연말종가 기준 연간 수익률(%) = 종가_t / 종가_{t-1} − 1."""
-    year_close: dict[int, tuple[str, float]] = {}
-    for row in rows:
-        d = (row.get("TRD_DD") or "").replace("-", "/")
-        c = row.get("CLSPRC_IDX") or row.get("CLSPRC") or row.get("CLSPRC_ISU") or ""
-        if not d or not c:
-            continue
+        print(f"// {market} 지수목록 조회 실패: {type(e).__name__}: {e}")
+        return []
+    out = []
+    for t in tickers:
         try:
-            year = int(d[:4])
-            val = float(str(c).replace(",", ""))
-        except ValueError:
-            continue
-        if val <= 0:
-            continue
-        if year not in year_close or d > year_close[year][0]:
-            year_close[year] = (d, val)
-    years = sorted(year_close)
-    return {
-        years[i]: round((year_close[years[i]][1] / year_close[years[i - 1]][1] - 1) * 100, 2)
-        for i in range(1, len(years))
-    }
+            out.append((t, stock.get_index_ticker_name(t)))
+        except Exception:
+            out.append((t, "?"))
+    return out
 
 
-def run(label: str, key: str, searches: list[str], base: str) -> None:
-    cands = find_index(searches)
-    if not cands:
-        print(f"// {label}: 파인더 결과 비어있음.")
+def find_tr(indices: list[tuple[str, str]], needles: list[str]) -> tuple[str, str] | tuple[None, None]:
+    for t, name in indices:
+        nm = name.upper().replace(" ", "")
+        if all(n.upper() in nm for n in needles):
+            return t, name
+    return None, None
+
+
+def annual_returns(ticker: str) -> dict[int, float]:
+    try:
+        df = stock.get_index_ohlcv(START, END, ticker, freq="y")
+    except TypeError:
+        df = stock.get_index_ohlcv(START, END, ticker)  # 일별 폴백
+    closes: dict[int, float] = {}
+    for idx, row in df.iterrows():
+        try:
+            v = float(row["종가"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        if v > 0:
+            closes[idx.year] = v  # 오름차순 → 같은 해는 마지막(연말) 값이 남음
+    years = sorted(closes)
+    return {years[i]: round((closes[years[i]] / closes[years[i - 1]] - 1) * 100, 2)
+            for i in range(1, len(years))}
+
+
+def run(label: str, key: str, market: str, needles: list[str]) -> None:
+    idx = list_indices(market)
+    if not idx:
+        print(f"// {label}: {market} 지수목록 비어있음 (로그인/네트워크 확인).")
         return
-    # TR이 한글명일 수 있어 전체 변형명을 본다.
-    print(f"// {label}: finder {len(cands)}건 — 전체 이름 ↓")
-    print("//  " + " | ".join((c.get("codeName") or "?") for c in cands))
-    pick = pick_index(cands, base)
-    if not pick:
-        print(f"// {label}: TR/총수익 변형도, base '{base}'도 못 찾음.")
+    t, name = find_tr(idx, needles)
+    if not t:
+        print(f"// {label}: '{' '.join(needles)}' 못 찾음. {market} 가용 지수명 {len(idx)}개 ↓ (붙여주세요)")
+        print("//  " + " | ".join(n for _, n in idx))
         return
-    is_tr = any(h.upper() in (pick.get("codeName") or "").upper().replace(" ", "") for h in TR_HINTS)
-    full, short = pick.get("full_code"), pick.get("short_code")
-    rows = series(full, short)
-    if not rows:
-        print(f"// {label}: 시세 비어있음. pick={json.dumps(pick, ensure_ascii=False)}")
+    try:
+        rets = annual_returns(t)
+    except Exception as e:
+        print(f"// {label}: 시세 조회 실패 ({name}, {t}): {type(e).__name__}: {e}")
         return
-    print(f"// {label}: 시세 OK ({pick.get('codeName')}, full={full}, short={short}), "
-          f"{'TR✅' if is_tr else 'PRICE(가격지수) — TR 미발견 시 폴백'}; 첫 행 키={list(rows[0].keys())}")
-    print("//  첫 행:", json.dumps(rows[0], ensure_ascii=False))
-    rets = annual_returns(rows)
     ys = sorted(rets)
     if not ys:
-        print(f"// {label}: 수익률 계산 실패(필드명 확인). 위 첫 행 참고.")
+        print(f"// {label}: 시세 비어있음 ({name}, {t}) — 로그인 확인.")
         return
+    print(f"// {label}: {name} (ticker {t}), {ys[0]}~{ys[-1]}")
     print(f"  // RETURN_YEARS.{key}\n  {key}: {ys},")
-    print(f"  // RETURNS.{key} ({pick.get('codeName')})\n  {key}: {[rets[y] for y in ys]},")
+    print(f"  // RETURNS.{key} (KRX 공식 TR, 배당 포함)\n  {key}: {[rets[y] for y in ys]},")
     print()
 
 
 if __name__ == "__main__":
-    print("// KRX 공식 gross TR (requests 직접 호출). 반영 시 indexData의 배당 가산(+1.8 등) 제거.\n")
-    prime()
-    run("KOSPI 200 TR", "ks", ["코스피 200", "코스피", "200"], "코스피 200")
-    run("KOSDAQ 150 TR", "kq", ["코스닥 150", "코스닥", "150"], "코스닥 150")
+    print(f"// KRX 공식 gross TR via pykrx, {START[:4]}~{END[:4]}. 반영 시 배당 가산(+1.8 등) 제거.\n")
+    run("KOSPI 200 TR", "ks", "KOSPI", ["200", "TR"])
+    run("KOSDAQ 150 TR", "kq", "KOSDAQ", ["150", "TR"])
