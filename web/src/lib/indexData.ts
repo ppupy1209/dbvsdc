@@ -81,29 +81,34 @@ export function costForIndices(indices: IndexKey[]): number {
 
 // ---------------------------------------------------------------------------
 // Year-by-year safe-asset deposit rate (30% sleeve).
-// A flat 3% across all history badly distorts the backtest — Korean 1-year time
-// deposits paid 10%+ in 1998 and ~1% in 2020. These are APPROXIMATE annual
-// averages (예금은행 정기예금, 신규취급액 기준), curated like the dividend/cost
-// approximations and pending verification against the official BOK ECOS series.
-// Future mode keeps the single forward-looking DEPOSIT_RATE (2026 assumption).
-// ⚠️ 추정·검증 필요 (공식: 한국은행 ECOS 예금은행 정기예금 금리).
+// A flat 3% across all history badly distorts the backtest — Korean deposits
+// paid 13% in 1998 and ~1.2% in 2021. These are the OFFICIAL World Bank annual
+// deposit interest rate for Korea (indicator FR.INR.DPST, annual average),
+// fetched 2026-06. 1995 (World Bank null) and 2025 (not yet published) are
+// provisional estimates, flagged below. Future mode keeps the single
+// forward-looking DEPOSIT_RATE (2026 assumption).
+// 출처: World Bank FR.INR.DPST (연평균). BOK ECOS 정기예금(신규취급액) 종가 기준으로의
+// 정밀 교체는 잔여 과제. 1995·2025만 추정.
 export const DEPOSIT_RATE_BY_YEAR: Record<number, number> = {
-  1995: 0.089, 1996: 0.075, 1997: 0.11, 1998: 0.135, 1999: 0.079, 2000: 0.072,
-  2001: 0.057, 2002: 0.048, 2003: 0.042, 2004: 0.038, 2005: 0.036, 2006: 0.045,
-  2007: 0.051, 2008: 0.058, 2009: 0.033, 2010: 0.034, 2011: 0.039, 2012: 0.035,
-  2013: 0.027, 2014: 0.025, 2015: 0.017, 2016: 0.015, 2017: 0.017, 2018: 0.02,
-  2019: 0.018, 2020: 0.011, 2021: 0.013, 2022: 0.033, 2023: 0.038, 2024: 0.035,
-  2025: 0.029,
+  1995: 0.088, // ⚠️ 추정 (World Bank 미발표)
+  1996: 0.1011, 1997: 0.1081, 1998: 0.1329, 1999: 0.0795, 2000: 0.0794,
+  2001: 0.0579, 2002: 0.0495, 2003: 0.0425, 2004: 0.0387, 2005: 0.0372,
+  2006: 0.045, 2007: 0.0517, 2008: 0.0587, 2009: 0.0348, 2010: 0.0386,
+  2011: 0.0415, 2012: 0.037, 2013: 0.0289, 2014: 0.0254, 2015: 0.0181,
+  2016: 0.0156, 2017: 0.0167, 2018: 0.0203, 2019: 0.0185, 2020: 0.0116,
+  2021: 0.012, 2022: 0.0312, 2023: 0.0384, 2024: 0.0348,
+  2025: 0.028, // ⚠️ 잠정 (World Bank 미발표, BOK 기준 추후 확정)
 };
 
 // ---------------------------------------------------------------------------
-// Currency denomination per index, and an approximate annual USD/KRW change.
+// Currency denomination per index, and the annual USD/KRW change.
 // Overseas indices are quoted in USD; a Korean investor in an UNHEDGED ETF earns
 // the USD index return PLUS the USD/KRW move. Applying this only matters for the
 // backtest (real historical FX); future mode assumes no FX drift. Values are the
-// annual % change of the year-end USD/KRW rate, APPROXIMATE and pending
-// verification (공식: 한국은행 ECOS 원/달러 종가).
-// ⚠️ 추정·검증 필요.
+// year-over-year change of the OFFICIAL World Bank annual-average USD/KRW rate
+// (indicator PA.NUS.FCRF), fetched 2026-06.
+// ⚠️ 방법론 주의: 연평균 환율 기준이라 연말 급변동(예: 2008·2022 말의 급등)은
+// 일부만 반영됩니다. 연말종가(BOK ECOS) 기준 정밀 교체는 잔여 과제. 2025는 잠정.
 export const CURRENCY: Record<IndexKey, "USD" | "KRW"> = {
   sp: "USD",
   nq: "USD",
@@ -117,12 +122,13 @@ export function isUsdIndex(key: IndexKey): boolean {
 }
 
 export const USDKRW_RETURN_BY_YEAR: Record<number, number> = {
-  1995: -0.018, 1996: 0.09, 1997: 1.008, 1998: -0.29, 1999: -0.055, 2000: 0.112,
-  2001: 0.039, 2002: -0.097, 2003: 0.01, 2004: -0.136, 2005: -0.023, 2006: -0.08,
-  2007: 0.007, 2008: 0.346, 2009: -0.075, 2010: -0.026, 2011: 0.015, 2012: -0.07,
-  2013: -0.015, 2014: 0.042, 2015: 0.066, 2016: 0.031, 2017: -0.113, 2018: 0.042,
-  2019: 0.036, 2020: -0.061, 2021: 0.095, 2022: 0.064, 2023: 0.02, 2024: 0.141,
-  2025: -0.062,
+  1995: -0.0405, 1996: 0.0431, 1997: 0.1808, 1998: 0.4772, 1999: -0.1523,
+  2000: -0.0497, 2001: 0.1419, 2002: -0.0304, 2003: -0.0479, 2004: -0.0381,
+  2005: -0.1064, 2006: -0.0674, 2007: -0.0272, 2008: 0.1837, 2009: 0.161,
+  2010: -0.0946, 2011: -0.0417, 2012: 0.0168, 2013: -0.0282, 2014: -0.0385,
+  2015: 0.0742, 2016: 0.0264, 2017: -0.0256, 2018: -0.0273, 2019: 0.0593,
+  2020: 0.0128, 2021: -0.0308, 2022: 0.1289, 2023: 0.011, 2024: 0.0442,
+  2025: 0.03, // ⚠️ 잠정 (World Bank 미발표)
 };
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,8 @@
 - **(후속2) 과거 빈도 %:** `historicalWinRate` — "과거 모든 N년 구간 중 X%에서 DC 우위" 손익분기 박스 노출(확률적 보조지표).
 - **(후속3) 결과 공유 URL + PDF:** `shareState.ts`(인코딩·방어적 디코딩) + 주소창 자동 동기화 + "링크 복사"·"PDF로 저장(window.print + @media print)". 테스트 35개.
 - [x] 프론트 후속: **결과 공유(URL 인코딩)** ✅ (2026-06-30)
-- ⚠️ **잔여(데이터 확보):** 연도별 예금금리·USD/KRW 근사치 → **BOK ECOS 공식값으로 교체 필요**. ks·kq KRX 공식 TR.
+- **(후속4) 금리·환율 공식값 반영:** 연도별 예금금리·USD/KRW를 **World Bank 공식 시계열**(FR.INR.DPST·PA.NUS.FCRF)로 교체. 재현 스크립트 `web/scripts/fetch-official-rates.mjs`. KRX TR 수동 절차 DATA-SOURCES에 명시. (상세 DEVLOG)
+- ⚠️ **잔여(정밀화):** ① 환율 연말종가(BOK ECOS 731Y001) 정밀화(현재 연평균) ② ks·kq **KRX 공식 gross TR** 수동 다운로드(절차 문서화됨) ③ 1995·2025 예금/환율 잠정치.
 
 ## 지금 상태 (2026-06-29)
 
