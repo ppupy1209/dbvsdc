@@ -3,6 +3,7 @@ import {
   breakevenIndexReturn,
   cagrOf,
   formatMan,
+  historicalWinRate,
   irpRetirementTax,
   retireTax,
   simulate,
@@ -223,6 +224,30 @@ describe("breakevenIndexReturn (손익분기 수익률)", () => {
     const low = breakevenIndexReturn(4000, 1, 2, ["ks"], m)!;
     const high = breakevenIndexReturn(4000, 10, 2, ["ks"], m)!;
     expect(high).toBeGreaterThan(low);
+  });
+});
+
+describe("historicalWinRate (과거 DC 우위 빈도)", () => {
+  it("is 100% when the index always beats the wage path", () => {
+    const m = market("ks", [50, 50]); // strong returns, no raise
+    const w = historicalWinRate(1200, 0, 2, ["ks"], m)!;
+    expect(w.winRate).toBe(1);
+    expect(w.windowSize).toBe(2);
+    expect(w.windows).toBe(1);
+  });
+
+  it("is 0% when returns are flat but wages rise (DB always wins)", () => {
+    const m = market("ks", [0, 0]);
+    const w = historicalWinRate(4000, 10, 2, ["ks"], m)!;
+    expect(w.winRate).toBe(0);
+  });
+
+  it("counts every window of the requested length", () => {
+    // sp has 31 years; a 15-year window yields 31-15+1 = 17 windows
+    const w = historicalWinRate(4000, 3, 15, ["sp"], SAMPLE_MARKET)!;
+    expect(w.windows).toBe(SAMPLE_MARKET.returns.sp.length - 15 + 1);
+    expect(w.winRate).toBeGreaterThanOrEqual(0);
+    expect(w.winRate).toBeLessThanOrEqual(1);
   });
 });
 

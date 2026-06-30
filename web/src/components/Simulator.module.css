@@ -392,6 +392,21 @@
 .breakevenDesc b {
   font-weight: 600;
 }
+.breakevenFreq {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 0.5px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.breakevenFreq b {
+  font-weight: 700;
+}
+.breakevenFreqNote {
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+}
 
 /* 미래 평균 시나리오 경고 — 확정수익 오인 방지 */
 .avgWarn {

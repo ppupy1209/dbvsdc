@@ -14,7 +14,7 @@ import {
   isUsdIndex,
   yearsForIndex,
 } from "@/lib/indexData";
-import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, Mode, simulate } from "@/lib/calc";
+import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, historicalWinRate, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
 import s from "./Simulator.module.css";
 
@@ -74,6 +74,11 @@ export default function Simulator() {
     [salary, raise, r.n, indices, market]
   );
   const indexCagr = indices[0] ? cagrOf(indices[0], market) : null;
+  // 과거 모든 동일기간 구간 중 DC가 DB를 이긴 빈도 (정직한 확률적 보조지표).
+  const winRate = useMemo(
+    () => historicalWinRate(salary, raise, effectivePeriod, indices, market),
+    [salary, raise, effectivePeriod, indices, market]
+  );
   // 세후(IRP 연금수령) 실수령 차이 = DC 세후 − DB 세후.
   const afterTaxDcDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
 
@@ -388,6 +393,14 @@ export default function Simulator() {
               </>
             )}
           </p>
+          {winRate && winRate.windows >= 2 && (
+            <p className={s.breakevenFreq}>
+              과거 모든 {winRate.windowSize}년 구간 중{" "}
+              <b className={s.cAccent}>{Math.round(winRate.winRate * 100)}%</b>
+              에서 DC가 DB를 앞섰습니다{" "}
+              <span className={s.breakevenFreqNote}>({winRate.windows}개 구간 · 미래 보장 아님)</span>
+            </p>
+          )}
         </div>
       )}
 

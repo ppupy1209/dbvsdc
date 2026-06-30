@@ -261,6 +261,39 @@ export function breakevenIndexReturn(
   return (lo + hi) / 2;
 }
 
+// Across every historical window of the chosen length, how often did DC's
+// terminal balance beat DB's? An honest, probabilistic complement to the single
+// average/worst paths — DB is constant for a given window length, so this is just
+// the share of windows whose DC outcome cleared that bar. Local currency, to
+// match the forward scenarios.
+export function historicalWinRate(
+  salaryMan: number,
+  raisePct: number,
+  n: number,
+  indices: IndexKey[],
+  data: MarketData
+): { winRate: number; windows: number; windowSize: number } | null {
+  if (!indices.length || n <= 0) return null;
+  const raise = raisePct / 100;
+  const years = availableReturnYears(data, indices);
+  const avail = years.length;
+  if (avail === 0) return null;
+  const windowSize = Math.min(n, avail);
+  const riskyCost = costForIndices(indices);
+  const dbFinal = annualContribution(salaryMan, raise, windowSize - 1) * windowSize;
+
+  let wins = 0;
+  let windows = 0;
+  for (let start = 0; start + windowSize <= avail; start++) {
+    const winYears = years.slice(start, start + windowSize);
+    const rets = historicalNetReturns(data, indices, winYears, riskyCost, false);
+    if (terminalDcBalance(salaryMan, raise, rets) >= dbFinal) wins++;
+    windows++;
+  }
+  if (windows === 0) return null;
+  return { winRate: wins / windows, windows, windowSize };
+}
+
 export function simulate(
   salaryMan: number,
   raisePct: number,
