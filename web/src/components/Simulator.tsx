@@ -16,7 +16,7 @@ import {
 } from "@/lib/indexData";
 import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, historicalWinRate, Mode, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
-import { decodeShare, encodeShare } from "@/lib/shareState";
+import MethodModal from "./MethodModal";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -39,9 +39,8 @@ export default function Simulator() {
   const [source, setSource] = useState<DataSource>("sample");
   const [asOf, setAsOf] = useState<string | undefined>(undefined);
   const [hover, setHover] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [methodOpen, setMethodOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
-  const hydrated = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -54,19 +53,6 @@ export default function Simulator() {
     return () => {
       alive = false;
     };
-  }, []);
-
-  // Hydrate state from a shared link once on mount (client-only to avoid SSR mismatch).
-  useEffect(() => {
-    const d = decodeShare(window.location.search);
-    if (d.mode) setMode(d.mode);
-    if (d.index) setIndices([d.index]);
-    if (d.period !== undefined) setPeriod(d.period);
-    if (d.salary !== undefined) setSalary(d.salary);
-    if (d.raise !== undefined) setRaise(d.raise);
-    if (d.scenario) setFutureScenario(d.scenario);
-    if (d.krw !== undefined) setKrwConvert(d.krw);
-    hydrated.current = true;
   }, []);
 
   const availableYears = useMemo(() => availableReturnYears(market, indices), [market, indices]);
@@ -97,39 +83,6 @@ export default function Simulator() {
   );
   // 세후(IRP 연금수령) 실수령 차이 = DC 세후 − DB 세후.
   const afterTaxDcDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
-
-  const shareState = useMemo(
-    () => ({
-      mode,
-      index: indices[0] ?? ("sp" as const),
-      period: effectivePeriod,
-      salary,
-      raise,
-      scenario: futureScenario,
-      krw: krwActive,
-    }),
-    [mode, indices, effectivePeriod, salary, raise, futureScenario, krwActive]
-  );
-
-  // Keep the address bar in sync (after hydration) so the current view is itself
-  // a shareable link, and the browser back/forward/refresh restores it.
-  useEffect(() => {
-    if (!hydrated.current) return;
-    window.history.replaceState(null, "", `${window.location.pathname}?${encodeShare(shareState)}`);
-  }, [shareState]);
-
-  const onShare = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?${encodeShare(shareState)}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // Clipboard blocked (insecure context / permissions) — at least keep the
-      // URL bar in sync so the user can copy it manually.
-      window.history.replaceState(null, "", `${window.location.pathname}?${encodeShare(shareState)}`);
-    }
-  };
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
@@ -326,8 +279,11 @@ export default function Simulator() {
             <span className={s.fxText}>
               <span className={s.fxTitle}>원화 환산</span>
               <span className={s.fxHint}>
-                환노출 ETF 기준 — USD 지수 수익률에 과거 원/달러 변동을 반영합니다.
-                {krwConvert ? " 환율은 추정치이며 환헤지형은 결과가 달라집니다." : " (끄면 USD/현지통화 기준)"}
+                해외 지수는 달러로 계산됩니다. 켜면 <b>환헤지 안 한 ETF</b>처럼, 지수 수익률에
+                그해 원/달러 환율 변동까지 더해 <b>원화로 체감한 실제 수익</b>으로 바꿉니다.
+                {krwConvert
+                  ? " 환율은 World Bank 연평균이라 연말 급등락은 일부만 반영된 추정치이며, 환헤지형 상품은 결과가 다릅니다."
+                  : " (끄면 달러 기준)"}
               </span>
             </span>
           </label>
@@ -505,7 +461,7 @@ export default function Simulator() {
               <b>미래 수익은 해마다 크게 오르내려 확정이 아닙니다.</b>{" "}
               {futureScenario === "average"
                 ? "이 선은 ‘매년 같은 수익률’을 가정한 것일 뿐, 실제로는 손실 구간도 생깁니다. ‘최악’ 시나리오도 함께 확인하세요."
-                : "‘최악’은 과거 같은 기간 중 가장 나빴던 경로이며, 미래는 이보다 더 나쁠 수도 있습니다."}
+                : "‘최악’은 과거 같은 기간 중 최종 적립금이 가장 적었던 실제 경로입니다. 그래서 연평균 %는 ‘평균’보다 높게 보일 수도 있어요(아래 ‘계산 근거’에서 설명). 미래는 이보다 더 나쁠 수도 있습니다."}
             </div>
           )}
 
@@ -700,14 +656,19 @@ export default function Simulator() {
         있습니다. 투자·세무 판단은 전문가와 상담하세요.
       </p>
 
-      <div className={`${s.actions} ${s.noPrint}`}>
-        <button type="button" className={s.actionBtn} onClick={onShare}>
-          {copied ? "링크 복사됨 ✓" : "결과 링크 복사"}
-        </button>
-        <button type="button" className={s.actionBtn} onClick={() => window.print()}>
-          PDF로 저장 · 인쇄
-        </button>
-      </div>
+      <button
+        type="button"
+        className={s.methodBtn}
+        onClick={() => setMethodOpen(true)}
+        aria-haspopup="dialog"
+      >
+        <span className={s.methodBtnIcon} aria-hidden="true">
+          ?
+        </span>
+        이 결과는 어떻게 계산되나요? — 데이터 출처·계산·세금
+      </button>
+
+      <MethodModal open={methodOpen} onClose={() => setMethodOpen(false)} source={source} asOf={asOf} />
     </div>
   );
 }

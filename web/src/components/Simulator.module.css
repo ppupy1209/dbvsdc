@@ -461,34 +461,42 @@
   color: var(--text-secondary);
 }
 
-.actions {
+/* 계산 근거·데이터 출처 모달을 여는 버튼 — 메인 화면을 차지하지 않는 절제된 폭넓은 링크형 */
+.methodBtn {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
   margin-top: 6px;
-}
-.actionBtn {
-  font-size: 13px;
-  font-weight: 500;
-  padding: 9px 16px;
+  padding: 12px 16px;
   border: 0.5px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-.actionBtn:hover {
+.methodBtn:hover {
   background: var(--bg-secondary);
   color: var(--text);
   border-color: var(--accent);
 }
-
-@media print {
-  .noPrint {
-    display: none !important;
-  }
+.methodBtnIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .legendRow {
