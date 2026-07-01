@@ -342,6 +342,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 .statsLine {
   font-size: 14px;

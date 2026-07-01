@@ -97,6 +97,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* NOTE: 전역 text-wrap(pretty/balance) 규칙은 여기 두면 Tailwind v4의 Lightning CSS가
+   컴파일 단계에서 제거해 버린다. 그래서 layout.tsx의 <style>(precedence)로 주입한다.
+   본문 고아 줄 방지(pretty) + 제목 줄 균형(balance). */
+
 /* 섹션 구분용 옅은 배경 밴드 (전체 폭) */
 .band {
   background: var(--bg-secondary);
