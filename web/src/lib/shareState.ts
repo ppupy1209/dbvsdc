@@ -50,7 +50,7 @@ export function decodeShare(search: string): Partial<ShareState> {
   if (idx && (INDEX_KEYS as string[]).includes(idx)) out.index = idx as IndexKey;
 
   const scn = p.get("scn");
-  if (scn === "average" || scn === "worst" || scn === "band") out.scenario = scn;
+  if (scn === "average" || scn === "worst") out.scenario = scn;
 
   // Only parse numeric fields when actually present — Number(null) is 0, which
   // would otherwise fabricate values for a missing param.

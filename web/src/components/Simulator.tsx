@@ -28,7 +28,7 @@ const PLOT_H = H - PAD.t - PAD.b;
 
 export default function Simulator() {
   const [mode, setMode] = useState<Mode>("back");
-  const [futureScenario, setFutureScenario] = useState<FutureScenario>("band");
+  const [futureScenario, setFutureScenario] = useState<FutureScenario>("worst");
   // 지수는 하나만 선택 (중복 선택 불가). calc는 배열을 받으므로 단일 원소 배열로 유지.
   const [indices, setIndices] = useState<IndexKey[]>(["sp"]);
   const [period, setPeriod] = useState(15);
@@ -137,9 +137,7 @@ export default function Simulator() {
   const selectedYears = indices[0] ? yearsForIndex(market, indices[0]) : market.years;
   const maxBase = useMemo(() => {
     let m = 1;
-    for (let i = 0; i <= r.n; i++) {
-      m = Math.max(m, r.dbArr[i], r.dcArr[i], r.band?.p90[i] ?? 0);
-    }
+    for (let i = 0; i <= r.n; i++) m = Math.max(m, r.dbArr[i], r.dcArr[i]);
     return m;
   }, [r]);
   const maxY = maxBase * 1.08;
@@ -161,15 +159,6 @@ export default function Simulator() {
     / /g,
     " L"
   )} L${px(r.n).toFixed(1)},${(PAD.t + PLOT_H).toFixed(1)} Z`;
-  // Filled ribbon between two percentile paths (upper drawn L→R, lower R→L).
-  const bandAreaD = (lower: number[], upper: number[]) => {
-    const up = upper.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" L");
-    const lo = lower
-      .map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`)
-      .reverse()
-      .join(" L");
-    return `M${up} L${lo} Z`;
-  };
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxBase);
   const crossover = useMemo(() => {
@@ -418,33 +407,18 @@ export default function Simulator() {
             </>
           ) : (
             <>
-              {futureScenario === "average"
-                ? "평균 시나리오 · 내 포트폴리오 연평균"
-                : futureScenario === "band"
-                  ? "확률 밴드 · 중앙값 연평균"
-                  : "최악 시나리오 · 내 포트폴리오 연평균"}{" "}
+              {futureScenario === "average" ? "평균 시나리오 · 내 포트폴리오 연평균" : "최악 시나리오 · 내 포트폴리오 연평균"}{" "}
               <span className={`${s.hl} ${s.cAccent}`}>
                 {(r.cagr * 100).toFixed(1)}%
               </span>{" "}
               {futureScenario === "average"
                 ? "(선택 지수 과거 CAGR 적용)"
-                : futureScenario === "band"
-                  ? "(과거 수익률 무작위 재추출 중앙값)"
-                  : r.scenarioStart && r.scenarioEnd
-                    ? `(과거 최악 ${r.n}년 경로: ${r.scenarioStart}~${r.scenarioEnd})`
-                    : "(안전자산만 선택)"}
+                : r.scenarioStart && r.scenarioEnd
+                  ? `(과거 최악 ${r.n}년 경로: ${r.scenarioStart}~${r.scenarioEnd})`
+                  : "(안전자산만 선택)"}
             </>
           )}
         </div>
-        {mode === "fwd" && r.band && (
-          <div className={s.bandProb}>
-            <b className={s.cAccent}>{Math.round(r.band.probDcWins * 100)}%</b> 확률로 DC가 DB보다 많습니다
-            <span className={s.bandProbNote}>
-              {" "}
-              · 10~90% 구간 {formatMan(r.band.p10Final)} ~ {formatMan(r.band.p90Final)}
-            </span>
-          </div>
-        )}
       </div>
 
       {breakeven !== null && indices[0] && (
@@ -487,15 +461,6 @@ export default function Simulator() {
               <button
                 type="button"
                 role="radio"
-                aria-checked={futureScenario === "band"}
-                className={`${s.scenarioBtn} ${futureScenario === "band" ? s.scenarioBtnOn : ""}`}
-                onClick={() => setFutureScenario("band")}
-              >
-                확률 밴드
-              </button>
-              <button
-                type="button"
-                role="radio"
                 aria-checked={futureScenario === "average"}
                 className={`${s.scenarioBtn} ${futureScenario === "average" ? s.scenarioBtnOn : ""}`}
                 onClick={() => setFutureScenario("average")}
@@ -521,9 +486,7 @@ export default function Simulator() {
                 ? "연도별 적립금 추이 (실제 수익률 반영)"
                 : futureScenario === "average"
                   ? "연도별 적립금 추이 (평균 시나리오)"
-                  : futureScenario === "band"
-                    ? "연도별 적립금 추이 (확률 밴드)"
-                    : "연도별 적립금 추이 (최악 시나리오)"}
+                  : "연도별 적립금 추이 (최악 시나리오)"}
             </div>
             <div className={s.legend}>
               <span className={s.cSecondary}>
@@ -532,14 +495,8 @@ export default function Simulator() {
               </span>
               <span className={s.cAccent}>
                 <span className={s.swatch} style={{ background: "var(--accent)" }} />
-                {r.band ? "DC 중앙값" : "DC"}
+                DC
               </span>
-              {r.band && (
-                <span className={s.cAccent}>
-                  <span className={s.bandSwatch} />
-                  10~90%
-                </span>
-              )}
             </div>
           </div>
 
@@ -548,15 +505,6 @@ export default function Simulator() {
               이 선은 <b>매년 같은 수익률</b>이라는 가정일 뿐입니다. 실제 수익은 해마다 크게
               오르내리고 손실 구간도 생깁니다 — <b>확정 수익이 아닙니다.</b> ‘최악’ 시나리오도 꼭
               함께 확인하세요.
-            </div>
-          )}
-
-          {mode === "fwd" && r.band && (
-            <div className={s.bandNote}>
-              과거 {availableYears.length}년치 연도별 수익률을 매년 <b>무작위로 다시 뽑아</b>{" "}
-              <b>{r.band.paths.toLocaleString()}회</b> 시뮬레이션한 결과입니다. 가운데 선은{" "}
-              <b>중앙값</b>, 띠는 <b>10~90% 구간</b>(짙은 띠는 25~75%)입니다. 매년 독립 추출을
-              가정하며, 확률 분포일 뿐 미래를 보장하지 않습니다.
             </div>
           )}
 
@@ -595,14 +543,7 @@ export default function Simulator() {
               </g>
             ))}
 
-            {r.band ? (
-              <>
-                <path d={bandAreaD(r.band.p10, r.band.p90)} fill="var(--accent)" fillOpacity={0.1} />
-                <path d={bandAreaD(r.band.p25, r.band.p75)} fill="var(--accent)" fillOpacity={0.16} />
-              </>
-            ) : (
-              <path d={areaD} fill="var(--accent)" fillOpacity={0.08} />
-            )}
+            <path d={areaD} fill="var(--accent)" fillOpacity={0.08} />
             <polyline
               points={dbPts}
               fill="none"
@@ -660,14 +601,11 @@ export default function Simulator() {
 
             {hover !== null &&
               (() => {
-                const boxW = r.band ? 152 : 138;
-                const bx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - boxW);
+                const bx = Math.min(Math.max(px(hover) + 10, PAD.l), W - PAD.r - 138);
                 const tx = bx + 12;
                 // 백테스트 모드에서 해당 연도(hover) DC 포트폴리오 수익률 (0이면 시작점 → 없음)
                 const dcRet = mode === "back" && hover >= 1 ? r.rets[hover - 1] : null;
-                // 확률 밴드 모드: 해당 연도의 10~90% 구간.
-                const bandRange = r.band && hover >= 1 ? { lo: r.band.p10[hover], hi: r.band.p90[hover] } : null;
-                const boxH = dcRet !== null || bandRange ? 82 : 64;
+                const boxH = dcRet !== null ? 82 : 64;
                 return (
                   <g>
                     <line
@@ -683,7 +621,7 @@ export default function Simulator() {
                     <rect
                       x={bx}
                       y={PAD.t + 4}
-                      width={boxW}
+                      width={138}
                       height={boxH}
                       rx={8}
                       fill="var(--bg-surface)"
@@ -697,8 +635,7 @@ export default function Simulator() {
                       DB {formatMan(r.dbArr[hover])}
                     </text>
                     <text x={tx} y={PAD.t + 58} fontSize={11.5} fill="var(--accent-text)">
-                      {r.band ? "DC 중앙값 " : "DC "}
-                      {formatMan(r.dcArr[hover])}
+                      DC {formatMan(r.dcArr[hover])}
                     </text>
                     {dcRet !== null && (
                       <text
@@ -709,11 +646,6 @@ export default function Simulator() {
                       >
                         DC 수익률 {dcRet >= 0 ? "+" : ""}
                         {(dcRet * 100).toFixed(1)}%
-                      </text>
-                    )}
-                    {bandRange && (
-                      <text x={tx} y={PAD.t + 76} fontSize={10.5} fill="var(--text-tertiary)">
-                        10~90% {yfmt(bandRange.lo)}~{yfmt(bandRange.hi)}
                       </text>
                     )}
                   </g>
