@@ -16,7 +16,8 @@
 - **(후속4) 금리·환율 공식값 반영:** 연도별 예금금리·USD/KRW를 **World Bank 공식 시계열**(FR.INR.DPST·PA.NUS.FCRF)로 교체. 재현 스크립트 `web/scripts/fetch-official-rates.mjs`. KRX TR 수동 절차 DATA-SOURCES에 명시. (상세 DEVLOG)
 - **(후속5) KRX TR 자동화:** `web/scripts/fetch-krx-tr.py`(pykrx, OTP 자동 처리) — 사용자가 네트워크 PC에서 실행 시 코스피200/코스닥150 TR 배열 출력. **수동 OTP 손작업 제거.** (샌드박스 외부망 차단이라 실행은 사용자 환경)
 - **(후속6) KRX TR 조사 종결:** pykrx+로그인까지 실측 → TR은 KRX 정보데이터시스템 목록에 없음(유료/ETF로만).
-- **(후속7) KRX 공식 가격지수 반영:** TR 대신 **공식 가격지수**(코스피200 1028·코스닥150 2203)를 pykrx+로그인으로 확보 → ks=KRX공식+1.8%(**1991~2025**, +12년·최대30년), kq=KRX공식+0.8%(**2011~2025**, +5년). 1stock1 교체·ETF 프록시 교체 완료. 2003~2025 기존값 정확 일치. ⚠️ **백엔드(:8090) 동기화는 Codex** — SampleMarketDataSource+Flyway 시드 갱신 필요.
+- **(후속7) KRX 공식 가격지수 반영:** TR 대신 **공식 가격지수**(코스피200 1028·코스닥150 2203)를 pykrx+로그인으로 확보 → ks=KRX공식+1.8%(**1991~2025**, +12년·최대30년), kq=KRX공식+0.8%(**2011~2025**, +5년). 1stock1 교체·ETF 프록시 교체 완료. 2003~2025 기존값 정확 일치.
+- **(후속8) 백엔드 동기화 완료:** Codex 위임 2회 미완(파일 무변경) → 사용자 승인하에 직접 반영. `SampleMarketDataSource.java`(ks 35·kq 15) + `V3__update_krx_official_ks_kq.sql`(live용 재시드) + `docker compose up --build api`. :8090 검증(ks 1991→2025, kq 2011→2025), 프론트 e2e 확인. 프론트↔백 데이터 정합.
 - ⚠️ **잔여(정밀화):** ① 환율 연말종가(BOK ECOS 731Y001, 현재 World Bank 연평균) ② 1995·2025 예금/환율 잠정치. (KRX TR은 종결 — 무료 경로 없음)
 
 ## 지금 상태 (2026-06-29)
