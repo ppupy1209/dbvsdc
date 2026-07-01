@@ -424,6 +424,44 @@
   color: var(--warning);
 }
 
+/* 미래 확률 밴드 — DC가 DB를 이길 확률 + 결과 범위 */
+.bandProb {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.bandProb b {
+  font-weight: 700;
+  font-size: 15px;
+}
+.bandProbNote {
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+}
+.bandNote {
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 13px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.bandNote b {
+  font-weight: 600;
+  color: var(--text);
+}
+.bandSwatch {
+  display: inline-block;
+  width: 12px;
+  height: 9px;
+  vertical-align: middle;
+  margin-right: 5px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 /* 세후 결론 요약 */
 .afterTaxVerdict {
   display: flex;
@@ -604,8 +642,8 @@
     margin-bottom: 10px;
   }
   .scenarioToggle {
-    grid-template-columns: 1fr 1fr;
-    width: min(220px, 100%);
+    grid-template-columns: repeat(3, 1fr);
+    width: min(320px, 100%);
   }
   /* tighten the slider rows so the value label never overflows on phones */
   .row {

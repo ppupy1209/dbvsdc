@@ -5,6 +5,7 @@ import {
   formatMan,
   historicalWinRate,
   irpRetirementTax,
+  monteCarloBands,
   retireTax,
   simulate,
 } from "../calc";
@@ -248,6 +249,79 @@ describe("historicalWinRate (과거 DC 우위 빈도)", () => {
     expect(w.windows).toBe(SAMPLE_MARKET.returns.sp.length - 15 + 1);
     expect(w.winRate).toBeGreaterThanOrEqual(0);
     expect(w.winRate).toBeLessThanOrEqual(1);
+  });
+});
+
+// A single-index market with an arbitrary number of years (for Monte Carlo).
+function nYearMarket(ksReturns: number[], depositRate = 0.03): MarketData {
+  const yrs = ksReturns.map((_, i) => 2000 + i);
+  return {
+    years: yrs,
+    returns: { sp: [], nq: [], dj: [], ks: ksReturns, kq: [] },
+    returnYears: { sp: [], nq: [], dj: [], ks: yrs, kq: [] },
+    depositRate,
+  };
+}
+
+describe("monteCarloBands (미래 확률 밴드)", () => {
+  it("is deterministic for identical inputs (seeded)", () => {
+    const a = monteCarloBands(4000, 3, 20, ["ks"], SAMPLE_MARKET);
+    const b = monteCarloBands(4000, 3, 20, ["ks"], SAMPLE_MARKET);
+    expect(a).toEqual(b);
+  });
+
+  it("returns null when history is too short for an honest bootstrap", () => {
+    // twoYearMarket has 2 years < MC_MIN_HISTORY (5)
+    expect(monteCarloBands(4000, 3, 20, ["ks"], twoYearMarket([10, 20]))).toBeNull();
+  });
+
+  it("returns percentiles that are ordered and anchored at 0", () => {
+    const band = monteCarloBands(4000, 3, 20, ["ks"], SAMPLE_MARKET)!;
+    expect(band.db.length).toBe(21);
+    expect(band.p50.length).toBe(21);
+    expect(band.db[0]).toBe(0);
+    expect(band.p50[0]).toBe(0);
+    const n = 20;
+    expect(band.p10[n]).toBeLessThanOrEqual(band.p25[n]);
+    expect(band.p25[n]).toBeLessThanOrEqual(band.p50[n]);
+    expect(band.p50[n]).toBeLessThanOrEqual(band.p75[n]);
+    expect(band.p75[n]).toBeLessThanOrEqual(band.p90[n]);
+    expect(band.p10Final).toBeCloseTo(band.p10[n], 6);
+    expect(band.p90Final).toBeCloseTo(band.p90[n], 6);
+  });
+
+  it("keeps the win probability within [0, 1]", () => {
+    const band = monteCarloBands(4000, 3, 20, ["ks"], SAMPLE_MARKET)!;
+    expect(band.probDcWins).toBeGreaterThanOrEqual(0);
+    expect(band.probDcWins).toBeLessThanOrEqual(1);
+  });
+
+  it("wins ~always with strong flat returns, ~never when wages outrun flat 0%", () => {
+    // Every draw is identical for a flat series → a degenerate but valid band.
+    const strong = monteCarloBands(1200, 0, 8, ["ks"], nYearMarket([50, 50, 50, 50, 50, 50, 50, 50]))!;
+    expect(strong.probDcWins).toBe(1);
+    expect(strong.p10Final).toBeCloseTo(strong.p90Final, 6); // no spread when flat
+
+    const weak = monteCarloBands(4000, 10, 8, ["ks"], nYearMarket([0, 0, 0, 0, 0, 0, 0, 0]))!;
+    expect(weak.probDcWins).toBe(0);
+  });
+});
+
+describe("simulate — Monte Carlo band scenario", () => {
+  it("projects the full horizon and exposes the band, with median driving finals", () => {
+    const r = simulate(4000, 3, 30, ["ks"], "fwd", SAMPLE_MARKET, { futureScenario: "band" });
+    expect(r.n).toBe(30);
+    expect(r.band).toBeDefined();
+    expect(r.dbArr.length).toBe(31);
+    expect(r.dcFinal).toBeCloseTo(r.band!.medianFinal, 6);
+    expect(r.dbFinal).toBeCloseTo(r.band!.dbFinal, 6);
+  });
+
+  it("falls back to the average line when history is too short for a band", () => {
+    const short = nYearMarket([10, 20, 30]); // 3 years < 5
+    const r = simulate(4000, 3, 30, ["ks"], "fwd", short, { futureScenario: "band" });
+    expect(r.band).toBeUndefined();
+    expect(r.n).toBe(30); // average scenario still projects the full horizon
   });
 });
 
