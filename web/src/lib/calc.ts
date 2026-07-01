@@ -56,14 +56,28 @@ function progTax(base: number): number {
   return base * 0.45 - 6594;
 }
 
-export function retireTax(amountMan: number, years: number): number {
-  let deduct: number;
-  if (years <= 5) deduct = 100 * years;
-  else if (years <= 10) deduct = 500 + 200 * (years - 5);
-  else if (years <= 20) deduct = 1500 + 250 * (years - 10);
-  else deduct = 4000 + 300 * (years - 20);
+// Step-by-step 퇴직소득세 breakdown, so the UI can show the actual worked figures
+// (근속연수공제 → 환산급여 → 환산급여공제 → 과세표준 → 산출세액 → 지방세).
+export interface RetireTaxBreakdown {
+  amount: number; // 퇴직급여 (man-won)
+  years: number; // 근속연수
+  serviceDeduct: number; // 근속연수공제
+  hwan: number; // 환산급여
+  hwanDeduct: number; // 환산급여공제
+  base: number; // 과세표준
+  nationalTax: number; // 산출세액(국세)
+  localTax: number; // 지방소득세(10%)
+  total: number; // 합계
+}
 
-  const hwan = (Math.max(amountMan - deduct, 0) / years) * 12;
+export function retireTaxBreakdown(amountMan: number, years: number): RetireTaxBreakdown {
+  let serviceDeduct: number;
+  if (years <= 5) serviceDeduct = 100 * years;
+  else if (years <= 10) serviceDeduct = 500 + 200 * (years - 5);
+  else if (years <= 20) serviceDeduct = 1500 + 250 * (years - 10);
+  else serviceDeduct = 4000 + 300 * (years - 20);
+
+  const hwan = (Math.max(amountMan - serviceDeduct, 0) / years) * 12;
   let hd: number;
   if (hwan <= 800) hd = hwan;
   else if (hwan <= 7000) hd = 800 + (hwan - 800) * 0.6;
@@ -73,7 +87,22 @@ export function retireTax(amountMan: number, years: number): number {
 
   const base = Math.max(hwan - hd, 0);
   const nationalTax = Math.max((progTax(base) / 12) * years, 0);
-  return nationalTax * (1 + RETIRE_LOCAL_TAX_RATE);
+  const localTax = nationalTax * RETIRE_LOCAL_TAX_RATE;
+  return {
+    amount: amountMan,
+    years,
+    serviceDeduct,
+    hwan,
+    hwanDeduct: hd,
+    base,
+    nationalTax,
+    localTax,
+    total: nationalTax + localTax,
+  };
+}
+
+export function retireTax(amountMan: number, years: number): number {
+  return retireTaxBreakdown(amountMan, years).total;
 }
 
 export function irpRetirementTax(lumpTax: number, payoutYears = IRP_PAYOUT_YEARS): number {

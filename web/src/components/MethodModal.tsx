@@ -2,20 +2,54 @@
 
 import { useEffect, useRef } from "react";
 import { DataSource } from "@/lib/api";
+import { FutureScenario, Mode, RetireTaxBreakdown, formatMan } from "@/lib/calc";
+import { IndexKey } from "@/lib/indexData";
 import s from "./MethodModal.module.css";
 
-// 결과의 신뢰성을 뒷받침하는 상세 설명(데이터 출처·계산 방식·세금)을 담는 모달.
-// 메인 화면을 차지하지 않도록 버튼으로 열고, 배경/ESC/닫기로 닫는다.
+// 현재 결과(입력값·수익률·세금)를 그대로 반영해 "실제값 기반 계산식"을 보여주는 데이터.
+export interface MethodData {
+  mode: Mode;
+  scenario: FutureScenario;
+  krwActive: boolean;
+  indexLabel: string;
+  indexKey: IndexKey;
+  source: DataSource;
+  asOf?: string;
+  basisText: string;
+  dividendYield: number;
+  etf: string;
+  realCost: number; // fraction
+  yearsStart: number;
+  yearsEnd: number;
+  indexCagr: number; // fraction
+  salary: number; // man-won
+  raise: number; // percent
+  n: number;
+  dep: number; // fraction
+  monthlyFirst: number; // 첫해 회사부담금 (man-won)
+  lastMonthlyWage: number; // 마지막 해 월급 (man-won)
+  dbFinal: number;
+  dcFinal: number;
+  portfolioCagr: number; // fraction
+  breakeven: number | null; // fraction
+  dbLump: RetireTaxBreakdown;
+  dcLump: RetireTaxBreakdown;
+  dbIrpTax: number;
+  dcIrpTax: number;
+  irpPayoutYears: number;
+}
+
+const pct = (f: number, d = 1) => `${(f * 100).toFixed(d)}%`;
+const man = (v: number) => formatMan(v);
+
 export default function MethodModal({
   open,
   onClose,
-  source,
-  asOf,
+  data,
 }: {
   open: boolean;
   onClose: () => void;
-  source: DataSource;
-  asOf?: string;
+  data: MethodData;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -36,8 +70,15 @@ export default function MethodModal({
 
   if (!open) return null;
 
+  const d = data;
   const dataBasis =
-    source === "live" ? `실데이터${asOf ? " · " + asOf : ""}` : "큐레이션한 지수 연간 수익률";
+    d.source === "live" ? `실데이터${d.asOf ? " · " + d.asOf : ""}` : "큐레이션한 지수 연간 수익률";
+  const dcMethodNote =
+    d.mode === "back"
+      ? `과거 ${d.yearsStart}~${d.yearsEnd} 실제 연도별 수익률로 계산했습니다.`
+      : d.scenario === "average"
+        ? "지수의 장기 평균 수익률을 매년 반복 적용했습니다."
+        : `과거 최악 ${d.n}년 구간의 실제 등락을 재생했습니다.`;
 
   return (
     <div
@@ -58,87 +99,111 @@ export default function MethodModal({
         </div>
 
         <div className={s.body}>
+          <p className={s.intro}>
+            아래는 지금 화면의 입력값(연봉 {d.salary.toLocaleString()}만원 · 상승률 {d.raise}% · {d.n}년 ·{" "}
+            {d.indexLabel})으로 실제 계산한 값입니다.
+          </p>
+
           <section className={s.section}>
             <h4 className={s.h}>1. 데이터 출처</h4>
-            <p className={s.p}>
-              지수 수익률은 모두 <b>배당 재투자 포함(총수익)</b> 기준입니다.
-            </p>
             <ul className={s.list}>
               <li>
-                <b>S&amp;P 500</b> — 연간 총수익 실측값.
+                <b>{d.indexLabel}</b> — {d.basisText}
+                {d.dividendYield > 0 ? ` (배당 +${d.dividendYield}%p)` : ""}. 배당 재투자 포함 <b>총수익</b>{" "}
+                기준.
               </li>
               <li>
-                <b>NASDAQ 100 · Dow Jones 30</b> — 가격수익률 + 평균 배당수익률.
+                이 지수의 과거 연평균(CAGR): <b>연 {pct(d.indexCagr)}</b> ({d.yearsStart}~{d.yearsEnd},
+                비용 차감 전).
               </li>
               <li>
-                <b>KOSPI 200 · KOSDAQ 150</b> — KRX 공식 가격지수(정보데이터시스템) + 평균 배당.
-                (KRX의 배당포함 지수는 공개되지 않아 근사)
+                위험자산(70%) 비용: {d.etf} <b>실부담비용 연 {pct(d.realCost, 2)}</b>.
               </li>
               <li>
-                <b>안전자산(30%) 금리</b> — 과거는 연도별 정기예금 금리(World Bank), 미래는 연 3.0% 가정.
+                안전자산(30%) 금리:{" "}
+                {d.mode === "back"
+                  ? "백테스트는 연도별 정기예금 금리(World Bank)"
+                  : `연 ${pct(d.dep)} 가정`}
+                .
               </li>
-              <li>
-                <b>환율</b> — 원/달러 연평균(World Bank). 해외 지수 ‘원화 환산’에 사용.
-              </li>
+              {d.krwActive && (
+                <li>
+                  원화 환산 ON: 원/달러 <b>연평균 환율(World Bank)</b> 변동을 반영(추정치).
+                </li>
+              )}
             </ul>
             <p className={s.note}>현재 데이터: {dataBasis}.</p>
           </section>
 
           <section className={s.section}>
-            <h4 className={s.h}>2. 계산 방식</h4>
+            <h4 className={s.h}>2. 계산 방식 (실제값)</h4>
             <ul className={s.list}>
               <li>
-                <b>공통</b> — 매년 회사가 ‘연봉의 1/12(약 한 달치 월급)’를 적립합니다. 연봉은 입력한
-                상승률로 매년 오릅니다.
+                매년 회사부담금 = <b>연봉 ÷ 12</b> = {d.salary.toLocaleString()} ÷ 12 ≈{" "}
+                <b>{man(d.monthlyFirst)}</b> (첫해). 이후 매년 {d.raise}%씩 늘어납니다.
               </li>
               <li>
-                <b>DB형</b> — 퇴직 직전 평균임금 × 근속연수. 운용과 무관하게 회사가 보장합니다.
+                <b>DB 최종</b> = 마지막 해 월급 × 근속연수 = {man(d.lastMonthlyWage)} × {d.n} ={" "}
+                <b>{man(d.dbFinal)}</b>.
               </li>
               <li>
-                <b>DC형</b> — 적립금을 안전자산 30% + 위험자산(선택 지수) 70%로 굴립니다. 위험자산에서는
-                추종 ETF의 <b>실부담비용</b>(보수+매매·중개비, 연 0.14~0.32%)을 매년 빼고, 해마다
-                수익률로 복리합니다.
+                <b>DC 최종</b> = 안전 30%(연 {pct(d.dep)}) + 위험 70%(지수 − 비용)를 섞어 <b>블렌드
+                연평균 {pct(d.portfolioCagr)}</b>로 {d.n}년 복리 → <b>{man(d.dcFinal)}</b>.
+                <span className={s.sub}>{dcMethodNote}</span>
               </li>
-              <li>
-                <b>손익분기 수익률</b> — 선택 지수가 매년 몇 %면 DC 최종액이 DB와 같아지는지를 계산합니다.
-                이보다 높으면 DC, 낮으면 DB가 유리합니다.
-              </li>
+              {d.breakeven !== null && (
+                <li>
+                  <b>손익분기 수익률</b> = 지수가 매년 <b>{pct(d.breakeven)}</b>면 DC 최종 = DB. 과거
+                  연평균({pct(d.indexCagr)})은 이보다{" "}
+                  {d.indexCagr > d.breakeven ? "높아 과거 기준 DC 우위" : "낮아 과거 기준 DB 우위"}.
+                </li>
+              )}
             </ul>
-            <p className={s.p}>
-              <b>미래 ‘평균’</b>은 지수의 장기 평균 수익률(기하평균)을 <b>매년 똑같이</b> 적용한 매끄러운
-              가정선이고, <b>미래 ‘최악’</b>은 과거 실제 같은 길이 구간 중 <b>최종 적립금이 가장 적었던</b>{" "}
-              실제 등락 경로입니다.
-            </p>
-            <div className={s.callout}>
-              <div className={s.calloutTitle}>Q. 왜 ‘최악’이 ‘평균’보다 높게 보일 때가 있나요?</div>
-              <p className={s.p}>
-                ‘최악’은 <b>수익률이 가장 낮은</b> 구간이 아니라 <b>최종 적립금이 가장 적은</b> 구간입니다.
-                또 실제 등락은 안전자산 30%가 완충해 줘서, ‘매년 같은 수익률’인 평균선보다 연평균 %가 더
-                높게 나올 수 있습니다. 특히 데이터 기간이 짧은 지수(예: 코스닥150)는 ‘최악’ 구간이 사실상
-                전체 기간과 같아져 이런 역전이 잘 생깁니다. 이때도 ‘최악’은 여전히 <b>가장 안 좋았던 실제
-                결과</b>라는 뜻입니다.
-              </p>
-            </div>
           </section>
 
           <section className={s.section}>
-            <h4 className={s.h}>3. 세금 계산</h4>
+            <h4 className={s.h}>3. 세금 계산 (실제값)</h4>
+            <p className={s.p}>
+              DC 일시금 {man(d.dcFinal)}에 대한 <b>퇴직소득세</b> 계산 단계:
+            </p>
             <ul className={s.list}>
               <li>
-                <b>퇴직소득세</b> — 근속연수공제 → (급여−공제)를 근속연수로 나눠 12를 곱한 ‘환산급여’ →
-                환산급여공제 → 누진세율(6~45%) → 지방소득세 10% 가산. (2023년 개정 산식) 예: 퇴직금 1억 ·
-                근속 10년 ≈ <b>약 426만원</b>.
+                근속연수공제({d.n}년): <b>−{man(d.dcLump.serviceDeduct)}</b>
               </li>
               <li>
-                <b>IRP 연금수령</b> — 퇴직급여를 IRP로 옮겨 만 55세 이후 연금으로 받으면 위 퇴직소득세를{" "}
-                <b>10년 이내 30%·11년부터 40%</b> 덜 냅니다. (여기선 15년 균등수령 가정)
+                환산급여 = ({man(d.dcFinal)} − 공제) ÷ {d.n} × 12 = <b>{man(d.dcLump.hwan)}</b>
               </li>
               <li>
-                이 계산은 DC 회사부담금과 운용수익 <b>전액을 퇴직소득</b>으로 과세한다고 가정합니다.
+                환산급여공제: <b>−{man(d.dcLump.hwanDeduct)}</b> → 과세표준 <b>{man(d.dcLump.base)}</b>
               </li>
-              <li>건강보험료 등 기타 부담금과 개인 추가납입(세액공제분)은 반영하지 않았습니다.</li>
+              <li>
+                산출세액(국세) {man(d.dcLump.nationalTax)} + 지방세 10% {man(d.dcLump.localTax)} ={" "}
+                <b>DC 일시금 세금 {man(d.dcLump.total)}</b> (세후 {man(d.dcFinal - d.dcLump.total)})
+              </li>
+              <li>
+                <b>IRP 연금수령</b>({d.irpPayoutYears}년 균등): 위 세금을 10년 이내 30%·11년부터 40%
+                덜 내 <b>DC 세금 {man(d.dcIrpTax)}</b> (세후 {man(d.dcFinal - d.dcIrpTax)})
+              </li>
             </ul>
+            <p className={s.note}>
+              DB도 같은 방식: 일시금 세금 {man(d.dbLump.total)}(세후 {man(d.dbFinal - d.dbLump.total)}) ·
+              IRP {man(d.dbIrpTax)}(세후 {man(d.dbFinal - d.dbIrpTax)}).
+            </p>
           </section>
+
+          {d.mode === "fwd" && d.scenario === "worst" && (
+            <section className={s.section}>
+              <div className={s.callout}>
+                <div className={s.calloutTitle}>Q. ‘최악’ 연평균이 ‘평균’보다 높을 수 있나요?</div>
+                <p className={s.p}>
+                  ‘최악’은 수익률이 가장 낮은 구간이 아니라 <b>최종 적립금이 가장 적은</b> 실제 구간이고,
+                  실제 등락을 안전자산 30%가 완충해 ‘매년 같은 수익률’ 평균선보다 연평균이 높게 나올 수
+                  있습니다. 데이터 기간이 짧은 지수는 특히 그렇습니다. 그래도 <b>가장 안 좋았던 실제 결과</b>
+                  라는 뜻은 그대로입니다.
+                </p>
+              </div>
+            </section>
+          )}
 
           <p className={s.disclaimer}>
             본 계산은 정보 제공용 <b>추정</b>이며 투자 권유·세무 자문이 아닙니다. 과거 수익률은 미래를

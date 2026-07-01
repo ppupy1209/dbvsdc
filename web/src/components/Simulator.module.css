@@ -427,11 +427,6 @@
 
 /* 세후 결론 요약 */
 .afterTaxVerdict {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
   background: var(--bg-surface);
   border: 0.5px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -439,8 +434,24 @@
   margin-bottom: 1.25rem;
 }
 .afterTaxLabel {
+  display: block;
   font-size: 12.5px;
   color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.afterTaxRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+}
+.afterTaxRow + .afterTaxRow {
+  border-top: 0.5px solid var(--border);
+}
+.afterTaxWay {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 .afterTaxText {
   font-size: 15px;

@@ -4,19 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from "react";
 import Term from "./Term";
 import {
+  DIVIDEND_YIELD,
   INDEX_COST,
   INDEX_KEYS,
   INDEX_LABELS,
   INDEX_META,
   IndexKey,
+  RETURN_BASIS_TEXT,
   SAMPLE_MARKET,
   availableReturnYears,
   isUsdIndex,
   yearsForIndex,
 } from "@/lib/indexData";
-import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, historicalWinRate, Mode, simulate } from "@/lib/calc";
+import { breakevenIndexReturn, cagrOf, formatMan, FutureScenario, historicalWinRate, Mode, retireTaxBreakdown, simulate } from "@/lib/calc";
 import { DataSource, fetchMarketData } from "@/lib/api";
-import MethodModal from "./MethodModal";
+import MethodModal, { MethodData } from "./MethodModal";
 import s from "./Simulator.module.css";
 
 // 차트 좌표 상수
@@ -81,8 +83,21 @@ export default function Simulator() {
     () => historicalWinRate(salary, raise, effectivePeriod, indices, market),
     [salary, raise, effectivePeriod, indices, market]
   );
-  // 세후(IRP 연금수령) 실수령 차이 = DC 세후 − DB 세후.
-  const afterTaxDcDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
+  // 세후 실수령 차이 = DC 세후 − DB 세후. 수령 방식별로 둘 다 보여준다.
+  const afterTaxIrpDiff = r.dcFinal - r.dcIrpTax - (r.dbFinal - r.dbIrpTax);
+  const afterTaxLumpDiff = r.dcFinal - r.dcLumpTax - (r.dbFinal - r.dbLumpTax);
+  const renderAfterTax = (diff: number) => {
+    if (Math.abs(diff) / Math.max(r.dbFinal, r.dcFinal, 1) < 0.005) return <>DB ≈ DC 비슷</>;
+    return diff > 0 ? (
+      <>
+        <b className={s.cAccent}>DC가 {formatMan(Math.abs(diff))}</b> 더 많음
+      </>
+    ) : (
+      <>
+        <b>DB가 {formatMan(Math.abs(diff))}</b> 더 많음
+      </>
+    );
+  };
 
   // 단일 선택: 클릭한 지수 하나만 선택 (항상 하나는 선택 상태 유지)
   const selectIndex = (k: IndexKey) => setIndices([k]);
@@ -114,10 +129,6 @@ export default function Simulator() {
   )} L${px(r.n).toFixed(1)},${(PAD.t + PLOT_H).toFixed(1)} Z`;
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * maxBase);
-  const crossover = useMemo(() => {
-    for (let i = 1; i <= r.n; i++) if (r.dcArr[i] >= r.dbArr[i]) return i;
-    return null;
-  }, [r]);
 
   const chartYears = mode === "back" ? availableYears.slice(Math.max(0, availableYears.length - r.n)) : [];
   const yearLabel = (i: number) => {
@@ -172,6 +183,40 @@ export default function Simulator() {
     verdictColor = "var(--text)";
   }
 
+  // '계산 근거' 모달에 넘길 현재 결과 기반 데이터 (실제값 계산식·지수 출처).
+  const methodIndex = indices[0] ?? "sp";
+  const methodCost = INDEX_COST[methodIndex];
+  const methodData: MethodData = {
+    mode,
+    scenario: futureScenario,
+    krwActive,
+    indexLabel: INDEX_LABELS[methodIndex],
+    indexKey: methodIndex,
+    source,
+    asOf,
+    basisText: RETURN_BASIS_TEXT[methodIndex],
+    dividendYield: DIVIDEND_YIELD[methodIndex],
+    etf: methodCost.etf,
+    realCost: methodCost.realCost,
+    yearsStart: selectedYears[0],
+    yearsEnd: selectedYears[selectedYears.length - 1],
+    indexCagr: indexCagr ?? cagrOf(methodIndex, market),
+    salary,
+    raise,
+    n: r.n,
+    dep: market.depositRate,
+    monthlyFirst: salary / 12,
+    lastMonthlyWage: (salary * Math.pow(1 + raise / 100, Math.max(r.n - 1, 0))) / 12,
+    dbFinal: r.dbFinal,
+    dcFinal: r.dcFinal,
+    portfolioCagr: r.cagr,
+    breakeven,
+    dbLump: retireTaxBreakdown(r.dbFinal, r.n),
+    dcLump: retireTaxBreakdown(r.dcFinal, r.n),
+    dbIrpTax: r.dbIrpTax,
+    dcIrpTax: r.dcIrpTax,
+    irpPayoutYears: r.irpPayoutYears,
+  };
 
   return (
     <div className={s.wrap} id="simulator">
@@ -516,29 +561,6 @@ export default function Simulator() {
               strokeLinejoin="round"
             />
 
-            {mode === "back" && crossover !== null && (
-              <g>
-                <line
-                  x1={px(crossover)}
-                  y1={PAD.t}
-                  x2={px(crossover)}
-                  y2={PAD.t + PLOT_H}
-                  stroke="var(--accent)"
-                  strokeWidth={1}
-                  strokeDasharray="3 3"
-                  opacity={0.5}
-                />
-                <text
-                  x={px(crossover) > W - 96 ? px(crossover) - 6 : px(crossover) + 6}
-                  y={PAD.t + 12}
-                  fontSize={11}
-                  fill="var(--accent-text)"
-                  textAnchor={px(crossover) > W - 96 ? "end" : "start"}
-                >
-                  {(mode === "back" ? yearLabel(crossover) : `${crossover}년차`) + " 역전"}
-                </text>
-              </g>
-            )}
 
             <circle cx={px(r.n)} cy={py(r.dbArr[r.n])} r={3} fill="var(--neutral)" />
             <circle cx={px(r.n)} cy={py(r.dcArr[r.n])} r={3.5} fill="var(--accent)" />
@@ -634,20 +656,15 @@ export default function Simulator() {
       </div>
 
       <div className={s.afterTaxVerdict}>
-        <span className={s.afterTaxLabel}>세후 결론 (IRP 연금수령 기준)</span>
-        <span className={s.afterTaxText}>
-          {Math.abs(afterTaxDcDiff) / Math.max(r.dbFinal, r.dcFinal, 1) < 0.005 ? (
-            <>DB ≈ DC 실수령 비슷</>
-          ) : afterTaxDcDiff > 0 ? (
-            <>
-              <b className={s.cAccent}>DC가 {formatMan(Math.abs(afterTaxDcDiff))}</b> 더 많음
-            </>
-          ) : (
-            <>
-              <b>DB가 {formatMan(Math.abs(afterTaxDcDiff))}</b> 더 많음
-            </>
-          )}
-        </span>
+        <span className={s.afterTaxLabel}>세후 실수령 결론</span>
+        <div className={s.afterTaxRow}>
+          <span className={s.afterTaxWay}>일시금 수령</span>
+          <span className={s.afterTaxText}>{renderAfterTax(afterTaxLumpDiff)}</span>
+        </div>
+        <div className={s.afterTaxRow}>
+          <span className={s.afterTaxWay}>IRP 연금수령</span>
+          <span className={s.afterTaxText}>{renderAfterTax(afterTaxIrpDiff)}</span>
+        </div>
       </div>
 
       <p className={s.inlineDisclaimer}>
@@ -665,10 +682,10 @@ export default function Simulator() {
         <span className={s.methodBtnIcon} aria-hidden="true">
           ?
         </span>
-        이 결과는 어떻게 계산되나요? — 데이터 출처·계산·세금
+        이 결과는 어떻게 계산되나요?
       </button>
 
-      <MethodModal open={methodOpen} onClose={() => setMethodOpen(false)} source={source} asOf={asOf} />
+      <MethodModal open={methodOpen} onClose={() => setMethodOpen(false)} data={methodData} />
     </div>
   );
 }

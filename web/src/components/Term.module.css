@@ -1,8 +1,20 @@
 .term {
   position: relative;
-  border-bottom: 1px dotted var(--text-tertiary);
+  display: inline;
   cursor: help;
   outline: none;
+}
+/* 밑줄은 글자에만 — 점선을 강조색으로 좀 더 또렷하게 (호버 대상임을 명확히) */
+.label {
+  border-bottom: 1px dashed var(--accent);
+}
+/* 작은 ⓘ 표시로 "설명을 볼 수 있다"는 신호를 준다 */
+.hint {
+  margin-left: 1px;
+  font-size: 0.72em;
+  line-height: 0;
+  color: var(--accent-text);
+  vertical-align: 0.32em;
 }
 .term:focus-visible {
   border-radius: 2px;
@@ -44,9 +56,10 @@
   border-top-color: var(--text);
 }
 
+/* 호버(마우스) 또는 키보드 포커스(:focus-visible)에서만 표시.
+   마우스 클릭은 :focus-visible이 아니므로 클릭 후 마우스를 떼면 사라진다. */
 .term:hover .bubble,
-.term:focus .bubble,
-.term:focus-within .bubble {
+.term:focus-visible .bubble {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
