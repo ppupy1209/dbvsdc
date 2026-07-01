@@ -50,11 +50,11 @@ export const RETURNS: Record<IndexKey, number[]> = {
 // Plain-language description of how each index's total-return series is built.
 // Shown in the "계산 근거" modal so the user can see the source per selected index.
 export const RETURN_BASIS_TEXT: Record<IndexKey, string> = {
-  sp: "연간 총수익(배당 재투자) 실측값",
-  nq: "가격수익률 + 평균 배당수익률 근사",
-  dj: "가격수익률 + 평균 배당수익률 근사",
-  ks: "KRX 공식 가격지수(정보데이터시스템) + 평균 배당 근사",
-  kq: "KRX 공식 가격지수(정보데이터시스템) + 평균 배당 근사",
+  sp: "Slickcharts 연간 총수익 실측값",
+  nq: "^NDX 가격지수(Yahoo Finance) + 평균 배당 근사, QQQ 총수익과 대조",
+  dj: "^DJI 가격지수(Yahoo Finance) + 평균 배당 근사, DIA 총수익과 대조",
+  ks: "KRX 공식 가격지수(정보데이터시스템, ticker 1028) + 평균 배당 근사",
+  kq: "KRX 공식 가격지수(정보데이터시스템, ticker 2203) + 평균 배당 근사",
 };
 
 // Legacy helper for APIs that still return price returns. SAMPLE_MARKET.returns already include these yields.
