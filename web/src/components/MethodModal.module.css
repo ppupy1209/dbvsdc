@@ -124,6 +124,15 @@
   font-weight: 600;
   color: var(--text);
 }
+.srcLink {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.srcLink:hover {
+  text-decoration: none;
+}
 .note {
   font-size: 12px;
   color: var(--text-tertiary);

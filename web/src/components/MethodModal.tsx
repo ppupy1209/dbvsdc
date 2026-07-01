@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { DataSource } from "@/lib/api";
 import { FutureScenario, Mode, RetireTaxBreakdown, formatMan } from "@/lib/calc";
-import { IndexKey } from "@/lib/indexData";
+import { IndexKey, ReturnSource } from "@/lib/indexData";
 import s from "./MethodModal.module.css";
 
 // 현재 결과(입력값·수익률·세금)를 그대로 반영해 "실제값 기반 계산식"을 보여주는 데이터.
@@ -15,7 +15,7 @@ export interface MethodData {
   indexKey: IndexKey;
   source: DataSource;
   asOf?: string;
-  basisText: string;
+  basis: ReturnSource;
   dividendYield: number;
   etf: string;
   realCost: number; // fraction
@@ -108,7 +108,18 @@ export default function MethodModal({
             <h4 className={s.h}>1. 데이터 출처</h4>
             <ul className={s.list}>
               <li>
-                <b>{d.indexLabel}</b> — {d.basisText}
+                <b>{d.indexLabel}</b> —{" "}
+                {d.basis.link && (
+                  <a
+                    className={s.srcLink}
+                    href={d.basis.link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {d.basis.link.label}
+                  </a>
+                )}
+                {d.basis.text}
                 {d.dividendYield > 0 ? ` (배당 +${d.dividendYield}%p)` : ""}. 배당 재투자 포함 <b>총수익</b>{" "}
                 기준.
               </li>

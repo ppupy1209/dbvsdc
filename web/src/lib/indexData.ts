@@ -47,14 +47,28 @@ export const RETURNS: Record<IndexKey, number[]> = {
   kq: [-2.43, -8.05, -1.96, 5.31, 23.27, -13.75, 51.83, -16.71, -10.92, 49.65, 0.26, -36.36, 46.29, -18.12, 37.76],
 };
 
-// Plain-language description of how each index's total-return series is built.
-// Shown in the "계산 근거" modal so the user can see the source per selected index.
-export const RETURN_BASIS_TEXT: Record<IndexKey, string> = {
-  sp: "Slickcharts 연간 총수익 실측값",
-  nq: "^NDX 가격지수(Yahoo Finance) + 평균 배당 근사, QQQ 총수익과 대조",
-  dj: "^DJI 가격지수(Yahoo Finance) + 평균 배당 근사, DIA 총수익과 대조",
-  ks: "KRX 공식 가격지수(정보데이터시스템, ticker 1028) + 평균 배당 근사",
-  kq: "KRX 공식 가격지수(정보데이터시스템, ticker 2203) + 평균 배당 근사",
+// How each index's total-return series is built, shown in the "계산 근거" modal.
+// `link` is the clickable data-source name (opens the actual source page); `text`
+// is the remainder rendered after it. KRX indices have no public deep link.
+export interface ReturnSource {
+  link?: { label: string; url: string };
+  text: string;
+}
+export const RETURN_SOURCE: Record<IndexKey, ReturnSource> = {
+  sp: {
+    link: { label: "Slickcharts", url: "https://www.slickcharts.com/sp500/returns" },
+    text: " 연간 총수익 실측값",
+  },
+  nq: {
+    link: { label: "^NDX 가격지수(Yahoo Finance)", url: "https://finance.yahoo.com/quote/%5ENDX/history" },
+    text: " + 평균 배당 근사, QQQ 총수익과 대조",
+  },
+  dj: {
+    link: { label: "^DJI 가격지수(Yahoo Finance)", url: "https://finance.yahoo.com/quote/%5EDJI/history" },
+    text: " + 평균 배당 근사, DIA 총수익과 대조",
+  },
+  ks: { text: "KRX 공식 가격지수(정보데이터시스템, ticker 1028) + 평균 배당 근사" },
+  kq: { text: "KRX 공식 가격지수(정보데이터시스템, ticker 2203) + 평균 배당 근사" },
 };
 
 // Legacy helper for APIs that still return price returns. SAMPLE_MARKET.returns already include these yields.
